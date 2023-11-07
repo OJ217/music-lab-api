@@ -13,7 +13,7 @@ export const AUTH_COOKIE_OPTIONS: Record<keyof typeof AUTH_COOKIE_KEYS, CookieOp
 		path: '/',
 		secure,
 		httpOnly: true,
-		maxAge: 24 * 60 * 60,
+		maxAge: 24 * 60 * 60 + 15 * 60,
 		sameSite: 'None',
 		partitioned: true,
 	},

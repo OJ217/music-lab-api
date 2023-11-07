@@ -43,10 +43,10 @@ export const generateToken = <TPayload = AuthenticatorContextPayload>(sub: strin
 
 export const extractToken = <TPayload = AuthenticatorContextPayload>(
 	rawToken: string,
-	secret: JwtType
+	jwtType: JwtType
 ): { valid: boolean; expired: boolean; decoded: AuthToken<TPayload> } | { valid: false; expired: boolean; decoded: null } => {
 	try {
-		const verifiedToken = jwt.verify(rawToken, JWT_SECRETS[secret]) as AuthToken<TPayload>;
+		const verifiedToken = jwt.verify(rawToken, JWT_SECRETS[jwtType]) as AuthToken<TPayload>;
 
 		if (verifiedToken.iss !== TOKEN_ISSUER)
 			return {

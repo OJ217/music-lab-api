@@ -9,12 +9,10 @@ import { extractToken, generateToken } from '@/util/auth.util';
 
 // ** Authenticator Middleware for Private Endpoints
 export const authenticateUser: MiddlewareHandler<{ Bindings: PrivateEndpointBindings }> = async (c, next) => {
-	const accessTokenRaw = getCookie(c, AUTH_COOKIE_KEYS.ACCESS_TOKEN);
-	const refreshTokenRaw = getCookie(c, AUTH_COOKIE_KEYS.REFRESH_TOKEN);
+	const accessTokenRaw = getCookie(c, AUTH_COOKIE_KEYS.ACCESS_TOKEN) as string;
+	const refreshTokenRaw = getCookie(c, AUTH_COOKIE_KEYS.REFRESH_TOKEN) as string;
 
-	console.log({ accessTokenRaw, refreshTokenRaw });
-
-	if (!accessTokenRaw) throw new HTTPException(401, { message: 'Unauthenticated: No cookies' });
+	if (!accessTokenRaw && !refreshTokenRaw) throw new HTTPException(401, { message: 'Unauthenticated: No access_token' });
 
 	const accessToken = extractToken(accessTokenRaw, 'access_token');
 
@@ -24,10 +22,10 @@ export const authenticateUser: MiddlewareHandler<{ Bindings: PrivateEndpointBind
 		return await next();
 	}
 
-	if (accessToken.expired && refreshTokenRaw) {
+	if ((accessToken.expired || !accessToken) && refreshTokenRaw) {
 		const refreshToken = extractToken(refreshTokenRaw, 'refresh_token');
 
-		if (!refreshToken.valid) throw new HTTPException(401, { message: 'Unauthenticated: Invalid token' });
+		if (!refreshToken.valid) throw new HTTPException(401, { message: 'Unauthenticated: Invalid refresh_token' });
 
 		const user = await User.findById(refreshToken.decoded.payload.id).lean();
 
