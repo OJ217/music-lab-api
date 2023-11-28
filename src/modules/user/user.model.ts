@@ -1,14 +1,16 @@
 import bcrypt from 'bcryptjs';
-import { Document, Model, model, Schema } from 'mongoose';
+import { Document, Model, model, Schema, Types } from 'mongoose';
 
-import { ArticleDocument } from '@/modules/article/article.model';
+import { EarTrainingPracticeSessionDocument } from '../ear-training/practice-session.model';
 
 export interface IUser {
 	email: string;
 	username: string;
 	picture?: string;
 	password?: string;
-	articles: Array<ArticleDocument['_id']>;
+	earTraining: {
+		practiceSessions: Types.Array<EarTrainingPracticeSessionDocument['_id']>;
+	};
 	createdAt: Date;
 	updatedAt: Date;
 	compare_passwords: ComparePasswordsMethod;
@@ -39,15 +41,22 @@ const userSchema = new Schema<IUser>(
 			required: false,
 			select: false,
 		},
-		articles: [{ type: Schema.Types.ObjectId, ref: 'articles' }],
+		earTraining: {
+			practiceSessions: [
+				{
+					type: Schema.Types.ObjectId,
+					ref: 'ear_training.practice_session',
+				},
+			],
+		},
 	},
 	{ timestamps: true }
 );
 
-// Schema indexes
+// ** Schema indexes
 userSchema.index({ email: 1 });
 
-// Schema hooks
+// ** Schema hooks
 userSchema.pre<UserDocument>('save', async function (next) {
 	if (!this.isModified('password') || !this.password) return next();
 	const salt = await bcrypt.genSalt(10);
@@ -56,9 +65,8 @@ userSchema.pre<UserDocument>('save', async function (next) {
 	return next();
 });
 
-// Schema statics
+// ** Schema statics
 type DuplicateEmailStatic = (email: string) => Promise<boolean>;
-
 const duplicate_email_exists: DuplicateEmailStatic = async email => {
 	const duplicateEmailUser = await User.findOne({ email });
 	return duplicateEmailUser !== null;
@@ -66,7 +74,7 @@ const duplicate_email_exists: DuplicateEmailStatic = async email => {
 
 userSchema.statics.duplicate_email_exists = duplicate_email_exists;
 
-// Schema methods
+// ** Schema methods
 type ComparePasswordsMethod = (candidatePassword: string) => Promise<boolean | null>;
 
 userSchema.methods.compare_passwords = async function (this: IUser, candidatePassword: string) {
