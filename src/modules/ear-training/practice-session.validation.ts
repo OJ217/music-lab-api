@@ -1,10 +1,14 @@
 import { z } from 'zod';
 
+import { paginationSchema } from '@/util/validation.util';
+
 import { EarTrainingPracticeType } from './practice-session.model';
 
-export const fetchEarTrainingPracticeSessionSchema = z.object({
+export const earTrainingExerciseTypeSchema = z.object({
 	type: z.nativeEnum(EarTrainingPracticeType),
 });
+
+export const fetchEarTrainingPracticeSessionSchema = paginationSchema.merge(earTrainingExerciseTypeSchema);
 
 export const createEarTrainingPracticeSessionSchema = z
 	.object({

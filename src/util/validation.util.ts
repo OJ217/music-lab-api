@@ -29,6 +29,6 @@ export const objectIdParamSchema = z.object({
 });
 
 export const paginationSchema = z.object({
-	pageNumber: z.coerce.number().positive().optional().default(1),
-	pageSize: z.coerce.number().lte(100).positive().optional().default(20),
+	page: z.string().pipe(z.coerce.number().int().min(1)).optional().default('1'),
+	limit: z.string().pipe(z.coerce.number().int().min(1).max(20)).optional().default('10'),
 });

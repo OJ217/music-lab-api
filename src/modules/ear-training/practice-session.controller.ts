@@ -5,8 +5,8 @@ import { ModuleController } from '@/types';
 import { objectIdParamSchema } from '@/util/validation.util';
 import { zValidator } from '@hono/zod-validator';
 
-import EarTrainingPracticeSession from './practice-session.model';
-import { createEarTrainingPracticeSessionSchema, fetchEarTrainingPracticeSessionSchema } from './practice-session.validation';
+import EarTrainingPracticeSession, { EarTrainingPracticeType } from './practice-session.model';
+import { createEarTrainingPracticeSessionSchema, earTrainingExerciseTypeSchema, fetchEarTrainingPracticeSessionSchema } from './practice-session.validation';
 
 const { private: earTrainingPracticeSessionPrivateEndpointController } = new ModuleController();
 
@@ -31,16 +31,20 @@ earTrainingPracticeSessionPrivateEndpointController.post('/', zValidator('json',
 
 earTrainingPracticeSessionPrivateEndpointController.get('/', zValidator('query', fetchEarTrainingPracticeSessionSchema), async c => {
 	const userId = c.env.authenticator?.id;
-	const fetchQuery = c.req.valid('query');
+	const { type, limit, page } = c.req.valid('query');
 
 	try {
 		const practiceSessions = await EarTrainingPracticeSession.paginate(
 			{
 				userId,
-				type: fetchQuery.type,
+				type,
 			},
 			{
-				limit: 10,
+				page,
+				limit,
+				sort: {
+					createdAt: -1,
+				},
 				projection: {
 					statistics: 0,
 					userId: 0,
@@ -61,18 +65,20 @@ earTrainingPracticeSessionPrivateEndpointController.get('/', zValidator('query',
 	}
 });
 
-earTrainingPracticeSessionPrivateEndpointController.get('/activity', async c => {
+earTrainingPracticeSessionPrivateEndpointController.get('/activity', zValidator('query', earTrainingExerciseTypeSchema.partial()), async c => {
 	const userId = new Types.ObjectId(c.env.authenticator?.id);
 	const weekBeforeCurrentDate = dayjs().subtract(1, 'week').toDate();
+	const exerciseTypeQuery = c.req.valid('query');
 
 	try {
-		let practiceSessionActivity = await EarTrainingPracticeSession.aggregate([
+		let practiceSessionActivity = await EarTrainingPracticeSession.aggregate<{ date: string; activity: number }>([
 			{
 				$match: {
 					userId,
 					createdAt: {
 						$gte: weekBeforeCurrentDate,
 					},
+					...(!!exerciseTypeQuery.type ? { type: exerciseTypeQuery.type } : {}),
 				},
 			},
 			{
@@ -95,7 +101,7 @@ earTrainingPracticeSessionPrivateEndpointController.get('/activity', async c => 
 			},
 		]);
 
-		if (practiceSessionActivity.length > 0) {
+		if (practiceSessionActivity.length > 0 && practiceSessionActivity.length < 7) {
 			const practiceSessionActivityMap = new Map(practiceSessionActivity.map(item => [item.date, item.activity]));
 
 			const currentDate = dayjs();
@@ -121,7 +127,7 @@ earTrainingPracticeSessionPrivateEndpointController.get('/scores', async c => {
 	const startOfMonth = dayjs().startOf('month').toDate();
 
 	try {
-		const practiceSessionScores = await EarTrainingPracticeSession.aggregate([
+		const practiceSessionScores = await EarTrainingPracticeSession.aggregate<{ type: EarTrainingPracticeType; correct: number; questionCount: number }>([
 			{
 				$match: {
 					userId,
@@ -158,6 +164,65 @@ earTrainingPracticeSessionPrivateEndpointController.get('/scores', async c => {
 	} catch (error) {
 		console.log(error);
 		return c.json({ success: false, error: 'Could not fetch practice session scores' });
+	}
+});
+
+earTrainingPracticeSessionPrivateEndpointController.get('/progress', zValidator('query', earTrainingExerciseTypeSchema.partial()), async c => {
+	const userId = new Types.ObjectId(c.env.authenticator?.id);
+	const weekBeforeCurrentDate = dayjs().subtract(1, 'week').toDate();
+	const exerciseTypeQuery = c.req.valid('query');
+
+	try {
+		let practiceSessionProgress = await EarTrainingPracticeSession.aggregate<{ date: string; correct: number; questionCount: number }>([
+			{
+				$match: {
+					userId,
+					createdAt: {
+						$gte: weekBeforeCurrentDate,
+					},
+					...(!!exerciseTypeQuery?.type ? { type: exerciseTypeQuery.type } : {}),
+				},
+			},
+			{
+				$group: {
+					_id: {
+						$dateToString: {
+							format: '%Y-%m-%d',
+							date: '$createdAt',
+						},
+					},
+					correct: { $sum: '$result.correct' },
+					questionCount: { $sum: '$result.questionCount' },
+				},
+			},
+			{
+				$project: {
+					_id: 0,
+					date: '$_id',
+					correct: 1,
+					questionCount: 1,
+				},
+			},
+		]);
+
+		if (practiceSessionProgress.length > 0 && practiceSessionProgress.length < 7) {
+			const practiceSessionProgressMap = new Map(practiceSessionProgress.map(item => [item.date, { correct: item.correct, questionCount: item.questionCount }]));
+
+			const currentDate = dayjs();
+
+			practiceSessionProgress = Array.from({ length: 7 }, (_, index) => currentDate.subtract(index, 'day').format('YYYY-MM-DD')).map(date => ({
+				date,
+				...(practiceSessionProgressMap.get(date) || { correct: 0, questionCount: 0 }),
+			}));
+		}
+
+		return c.json({
+			success: true,
+			data: practiceSessionProgress,
+		});
+	} catch (error) {
+		console.log(error);
+		return c.json({ success: false, error: 'Could not fetch practice session activity' });
 	}
 });
 

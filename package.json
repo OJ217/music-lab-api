@@ -15,7 +15,7 @@
 		"serverless-offline": "^13.2.0"
 	},
 	"dependencies": {
-		"@hono/zod-validator": "^0.1.9",
+		"@hono/zod-validator": "^0.1.11",
 		"bcryptjs": "^2.4.3",
 		"dayjs": "^1.11.10",
 		"google-auth-library": "^9.1.0",
