@@ -1,16 +1,17 @@
 import dayjs from 'dayjs';
 import { Types } from 'mongoose';
 
+import { schemaValidator } from '@/middleware/validation.middleware';
 import { ModuleController } from '@/types';
+import { ApiErrorCode, ApiException, HttpStatus } from '@/util/error.util';
 import { objectIdParamSchema } from '@/util/validation.util';
-import { zValidator } from '@hono/zod-validator';
 
 import EarTrainingPracticeSession, { EarTrainingPracticeType } from './practice-session.model';
 import { createEarTrainingPracticeSessionSchema, earTrainingExerciseTypeSchema, fetchEarTrainingPracticeSessionSchema } from './practice-session.validation';
 
 const { private: earTrainingPracticeSessionPrivateEndpointController } = new ModuleController();
 
-earTrainingPracticeSessionPrivateEndpointController.post('/', zValidator('json', createEarTrainingPracticeSessionSchema), async c => {
+earTrainingPracticeSessionPrivateEndpointController.post('/', schemaValidator('json', createEarTrainingPracticeSessionSchema), async c => {
 	const userId = c.env.authenticator?.id;
 	const earTrainingracticeSessionData = c.req.valid('json');
 
@@ -25,11 +26,14 @@ earTrainingPracticeSessionPrivateEndpointController.post('/', zValidator('json',
 		});
 	} catch (error) {
 		console.log(error);
-		return c.json({ success: false, error: 'Could not add practice session' });
+		throw new ApiException(HttpStatus.INTERNAL_ERROR, ApiErrorCode.INTERNAL_ERROR, {
+			isReadableMessage: false,
+			message: 'Could not add practice session',
+		});
 	}
 });
 
-earTrainingPracticeSessionPrivateEndpointController.get('/', zValidator('query', fetchEarTrainingPracticeSessionSchema), async c => {
+earTrainingPracticeSessionPrivateEndpointController.get('/', schemaValidator('query', fetchEarTrainingPracticeSessionSchema), async c => {
 	const userId = c.env.authenticator?.id;
 	const { type, limit, page } = c.req.valid('query');
 
@@ -61,11 +65,14 @@ earTrainingPracticeSessionPrivateEndpointController.get('/', zValidator('query',
 		});
 	} catch (error) {
 		console.log(error);
-		return c.json({ success: false, error: 'Could not fetch user practice sessions' });
+		throw new ApiException(HttpStatus.INTERNAL_ERROR, ApiErrorCode.INTERNAL_ERROR, {
+			isReadableMessage: false,
+			message: 'Could not fetch user practice sessions',
+		});
 	}
 });
 
-earTrainingPracticeSessionPrivateEndpointController.get('/activity', zValidator('query', earTrainingExerciseTypeSchema.partial()), async c => {
+earTrainingPracticeSessionPrivateEndpointController.get('/activity', schemaValidator('query', earTrainingExerciseTypeSchema.partial()), async c => {
 	const userId = new Types.ObjectId(c.env.authenticator?.id);
 	const weekBeforeCurrentDate = dayjs().subtract(1, 'week').toDate();
 	const exerciseTypeQuery = c.req.valid('query');
@@ -118,7 +125,10 @@ earTrainingPracticeSessionPrivateEndpointController.get('/activity', zValidator(
 		});
 	} catch (error) {
 		console.log(error);
-		return c.json({ success: false, error: 'Could not fetch practice session activity' });
+		throw new ApiException(HttpStatus.INTERNAL_ERROR, ApiErrorCode.INTERNAL_ERROR, {
+			isReadableMessage: false,
+			message: 'Could not fetch practice session activity',
+		});
 	}
 });
 
@@ -163,11 +173,14 @@ earTrainingPracticeSessionPrivateEndpointController.get('/scores', async c => {
 		});
 	} catch (error) {
 		console.log(error);
-		return c.json({ success: false, error: 'Could not fetch practice session scores' });
+		throw new ApiException(HttpStatus.INTERNAL_ERROR, ApiErrorCode.INTERNAL_ERROR, {
+			isReadableMessage: false,
+			message: 'Could not fetch practice session scores',
+		});
 	}
 });
 
-earTrainingPracticeSessionPrivateEndpointController.get('/progress', zValidator('query', earTrainingExerciseTypeSchema.partial()), async c => {
+earTrainingPracticeSessionPrivateEndpointController.get('/progress', schemaValidator('query', earTrainingExerciseTypeSchema.partial()), async c => {
 	const userId = new Types.ObjectId(c.env.authenticator?.id);
 	const weekBeforeCurrentDate = dayjs().subtract(1, 'week').toDate();
 	const exerciseTypeQuery = c.req.valid('query');
@@ -222,11 +235,14 @@ earTrainingPracticeSessionPrivateEndpointController.get('/progress', zValidator(
 		});
 	} catch (error) {
 		console.log(error);
-		return c.json({ success: false, error: 'Could not fetch practice session activity' });
+		throw new ApiException(HttpStatus.INTERNAL_ERROR, ApiErrorCode.INTERNAL_ERROR, {
+			isReadableMessage: false,
+			message: 'Could not fetch practice session activity',
+		});
 	}
 });
 
-earTrainingPracticeSessionPrivateEndpointController.get('/:id', zValidator('param', objectIdParamSchema), async c => {
+earTrainingPracticeSessionPrivateEndpointController.get('/:id', schemaValidator('param', objectIdParamSchema), async c => {
 	const userId = c.env.authenticator?.id;
 	const { id: practiceSessionId } = c.req.valid('param');
 
@@ -243,11 +259,13 @@ earTrainingPracticeSessionPrivateEndpointController.get('/:id', zValidator('para
 		);
 
 		if (!practiceSession) {
-			c.status(404);
-			return c.json({
-				success: false,
-				message: 'Not found',
-			});
+			return c.json(
+				{
+					success: false,
+					message: 'Not found',
+				},
+				HttpStatus.NOT_FOUND
+			);
 		}
 
 		return c.json({
@@ -256,7 +274,10 @@ earTrainingPracticeSessionPrivateEndpointController.get('/:id', zValidator('para
 		});
 	} catch (error) {
 		console.log(error);
-		return c.json({ success: false, error: 'Could not fetch user practice session' });
+		throw new ApiException(HttpStatus.INTERNAL_ERROR, ApiErrorCode.INTERNAL_ERROR, {
+			isReadableMessage: false,
+			message: 'Could not fetch user practice session',
+		});
 	}
 });
 

@@ -1,4 +1,5 @@
-import { Document, Model, model, Schema } from 'mongoose';
+import { Document, model, PaginateModel, Schema } from 'mongoose';
+import mongoosePaginate from 'mongoose-paginate-v2';
 
 import { UserDocument } from '@/modules/user/user.model';
 
@@ -13,8 +14,6 @@ export interface IArticle {
 }
 
 export interface ArticleDocument extends IArticle, Document {}
-
-interface ArticleModel extends Model<IArticle> {}
 
 const articleSchema = new Schema<IArticle>(
 	{
@@ -39,8 +38,9 @@ const articleSchema = new Schema<IArticle>(
 	{ timestamps: true }
 );
 
+articleSchema.plugin(mongoosePaginate);
 articleSchema.index({ title: 1 });
 
-const Article = model<IArticle, ArticleModel>('articles', articleSchema);
+const Article = model<IArticle, PaginateModel<ArticleDocument>>('articles', articleSchema);
 
 export default Article;

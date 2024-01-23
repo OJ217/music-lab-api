@@ -1,6 +1,7 @@
+import { schemaValidator } from '@/middleware/validation.middleware';
 import { ModuleController } from '@/types';
+import { HttpStatus } from '@/util/error.util';
 import { objectIdParamSchema } from '@/util/validation.util';
-import { zValidator } from '@hono/zod-validator';
 
 import User from './user.model';
 
@@ -13,10 +14,24 @@ userPrivateEndpointController.get('/', async c => {
 
 userPrivateEndpointController.get('/me', async c => {
 	const user = await User.findById(c.env.authenticator.id);
-	return c.json({ success: true, user });
+
+	if (!user) {
+		return c.json({ success: false, message: 'User not found' }, HttpStatus.NOT_FOUND);
+	}
+
+	return c.json({
+		success: true,
+		user: {
+			_id: user.id,
+			email: user.email,
+			username: user.username,
+			picture: user.picture,
+			createdAt: user.createdAt,
+		},
+	});
 });
 
-userPrivateEndpointController.get('/:id', zValidator('param', objectIdParamSchema), async c => {
+userPrivateEndpointController.get('/:id', schemaValidator('param', objectIdParamSchema), async c => {
 	const user = await User.findById(c.req.param('id'));
 
 	if (!user) return c.json({ success: false, message: 'Not found!' });

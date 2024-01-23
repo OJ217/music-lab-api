@@ -15,11 +15,10 @@
 		"serverless-offline": "^13.2.0"
 	},
 	"dependencies": {
-		"@hono/zod-validator": "^0.1.11",
 		"bcryptjs": "^2.4.3",
 		"dayjs": "^1.11.10",
 		"google-auth-library": "^9.1.0",
-		"hono": "^3.9.0",
+		"hono": "^3.12.6",
 		"jsonwebtoken": "^9.0.2",
 		"mongoose": "^8.0.1",
 		"mongoose-paginate-v2": "^1.7.4",

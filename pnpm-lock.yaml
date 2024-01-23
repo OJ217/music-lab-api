@@ -5,9 +5,6 @@ settings:
   excludeLinksFromLockfile: false
 
 dependencies:
-  '@hono/zod-validator':
-    specifier: ^0.1.11
-    version: 0.1.11(hono@3.9.0)(zod@3.22.4)
   bcryptjs:
     specifier: ^2.4.3
     version: 2.4.3
@@ -18,8 +15,8 @@ dependencies:
     specifier: ^9.1.0
     version: 9.1.0
   hono:
-    specifier: ^3.9.0
-    version: 3.9.0
+    specifier: ^3.12.6
+    version: 3.12.6
   jsonwebtoken:
     specifier: ^9.0.2
     version: 9.0.2
@@ -988,16 +985,6 @@ packages:
       '@hapi/bourne': 3.0.0
       '@hapi/hoek': 11.0.2
     dev: true
-
-  /@hono/zod-validator@0.1.11(hono@3.9.0)(zod@3.22.4):
-    resolution: {integrity: sha512-PQXeHUP0+36qpRt8yfeD7N2jbK3ETlGvSN6dMof/HwUC/APRokQRjpXZm4rrlG71Ft0aWE01+Bm4XejqPie5Uw==}
-    peerDependencies:
-      hono: '>=3.9.0'
-      zod: ^3.19.1
-    dependencies:
-      hono: 3.9.0
-      zod: 3.22.4
-    dev: false
 
   /@kwsites/file-exists@1.1.1(supports-color@8.1.1):
     resolution: {integrity: sha512-m9/5YGR18lIwxSFDwfE3oA7bWuq9kdau6ugN4H2rJeyhFQZcG9AgSHkQtSD15a8WvTgfz9aikZMrKPHvbpqFiw==}
@@ -3215,8 +3202,8 @@ packages:
     engines: {node: '>=8'}
     dev: true
 
-  /hono@3.9.0:
-    resolution: {integrity: sha512-MSGmerYD69jwDkBa631lY7y3xtEwbKFg2huFZ0TruzCdfJlmPd/rFzyvmMheePKsiA7CZp/KqL3mflBOzEmjLA==}
+  /hono@3.12.6:
+    resolution: {integrity: sha512-nnLMJbBA8k+tW8XD1Xt0BfNmJswppYF2pSOVo5U3DdU72SPYUjFkPg7/Q9KfkNcsrXzxFdJQ00JYjPGancmOOA==}
     engines: {node: '>=16.0.0'}
     dev: false
 

@@ -1,6 +1,7 @@
+import { schemaValidator } from '@/middleware/validation.middleware';
 import { ModuleController } from '@/types';
-import { objectIdParamSchema } from '@/util/validation.util';
-import { zValidator } from '@hono/zod-validator';
+import { ApiErrorCode, ApiException, HttpStatus } from '@/util/error.util';
+import { objectIdParamSchema, paginationSchema } from '@/util/validation.util';
 
 import User from '../user/user.model';
 import Article from './article.model';
@@ -8,22 +9,39 @@ import { createArticleSchema, createArticlesSchema, updateArticleSchema } from '
 
 const { public: articlePublicEndpointController, private: articlePrivateEndpointController } = new ModuleController();
 
-articlePublicEndpointController.get('/', async c => {
-	const articles = await Article.find({}).sort({ createdAt: -1 }).lean();
-	return c.json({ success: true, docs: articles });
+articlePublicEndpointController.get('/', schemaValidator('query', paginationSchema), async c => {
+	const { page, limit } = c.req.valid('query');
+
+	const articles = await Article.paginate(
+		{},
+		{
+			page,
+			limit,
+			sort: {
+				createdAt: -1,
+			},
+			lean: true,
+			leanWithId: false,
+		}
+	);
+
+	return c.json({ success: true, data: articles });
 });
 
-articlePublicEndpointController.get('/:id', zValidator('param', objectIdParamSchema), async c => {
+articlePublicEndpointController.get('/:id', schemaValidator('param', objectIdParamSchema), async c => {
 	const article = await Article.findById(c.req.param('id')).lean();
 
-	if (!article) return c.json({ success: false, message: 'Not found!' });
+	if (!article)
+		throw new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.NOT_FOUND, {
+			isReadableMessage: true,
+			message: 'err.user_not_found',
+		});
 
 	return c.json({ success: true, doc: article });
 });
 
 // ** Private Endpoints
-
-articlePrivateEndpointController.post('/', zValidator('json', createArticleSchema), async c => {
+articlePrivateEndpointController.post('/', schemaValidator('json', createArticleSchema), async c => {
 	const userId = c.env.authenticator?.id;
 	const articleData = c.req.valid('json');
 
@@ -33,11 +51,14 @@ articlePrivateEndpointController.post('/', zValidator('json', createArticleSchem
 		return c.json({ sucess: true, data: article });
 	} catch (error) {
 		console.log(error);
-		return c.json({ success: false, error: 'Could not create new article' });
+		throw new ApiException(HttpStatus.INTERNAL_ERROR, ApiErrorCode.INTERNAL_ERROR, {
+			isReadableMessage: false,
+			message: 'Could not create new article',
+		});
 	}
 });
 
-articlePrivateEndpointController.post('/list', zValidator('json', createArticlesSchema), async c => {
+articlePrivateEndpointController.post('/list', schemaValidator('json', createArticlesSchema), async c => {
 	const userId = c.env.authenticator?.id;
 	const articlesData = c.req.valid('json').docs.map(a => ({ ...a, author: userId }));
 
@@ -48,11 +69,14 @@ articlePrivateEndpointController.post('/list', zValidator('json', createArticles
 		return c.json({ success: true, data: { docs: articles } });
 	} catch (error) {
 		console.log(error);
-		return c.json({ success: false, error: 'Could not create new articles' });
+		throw new ApiException(HttpStatus.INTERNAL_ERROR, ApiErrorCode.INTERNAL_ERROR, {
+			isReadableMessage: false,
+			message: 'Could not create new articles',
+		});
 	}
 });
 
-articlePrivateEndpointController.patch('/:id', zValidator('param', objectIdParamSchema), zValidator('json', updateArticleSchema), async c => {
+articlePrivateEndpointController.patch('/:id', schemaValidator('param', objectIdParamSchema), schemaValidator('json', updateArticleSchema), async c => {
 	const { id: articleId } = c.req.valid('param');
 	const articleData = c.req.valid('json');
 
@@ -61,11 +85,14 @@ articlePrivateEndpointController.patch('/:id', zValidator('param', objectIdParam
 		return c.json({ success: true, data: article });
 	} catch (error) {
 		console.log(error);
-		return c.json({ success: false, error: 'Could not update article' });
+		throw new ApiException(HttpStatus.INTERNAL_ERROR, ApiErrorCode.INTERNAL_ERROR, {
+			isReadableMessage: false,
+			message: 'Could not update article',
+		});
 	}
 });
 
-articlePrivateEndpointController.delete('/:id', zValidator('param', objectIdParamSchema), async c => {
+articlePrivateEndpointController.delete('/:id', schemaValidator('param', objectIdParamSchema), async c => {
 	const { id: articleId } = c.req.valid('param');
 	const userId = c.env.authenticator?.id;
 
@@ -76,7 +103,10 @@ articlePrivateEndpointController.delete('/:id', zValidator('param', objectIdPara
 		return c.json({ success: true, message: 'Deleted' });
 	} catch (error) {
 		console.log(error);
-		return c.json({ success: false, error: 'Could not delete article' });
+		throw new ApiException(HttpStatus.INTERNAL_ERROR, ApiErrorCode.INTERNAL_ERROR, {
+			isReadableMessage: false,
+			message: 'Could not delete article',
+		});
 	}
 });
 

@@ -1,23 +1,32 @@
 import { OAuth2Client } from 'google-auth-library';
 
+import { schemaValidator } from '@/middleware/validation.middleware';
 import { AuthenticatorContextPayload, ModuleController } from '@/types';
 import { generateToken } from '@/util/auth.util';
-import { zValidator } from '@hono/zod-validator';
+import { ApiErrorCode, ApiException, HttpStatus } from '@/util/error.util';
 
 import User from '../user/user.model';
 import { googleOAuthReSchema, signInReqSchema, signUpReqSchema } from './auth.validation';
 
 const { public: authPublicEndpointController } = new ModuleController();
 
-authPublicEndpointController.post('/sign-in', zValidator('json', signInReqSchema), async c => {
+authPublicEndpointController.post('/sign-in', schemaValidator('json', signInReqSchema), async c => {
 	const { email, password } = c.req.valid('json');
 	const user = await User.findOne({ email }).select('+password');
 
-	if (!user) return c.json({ success: false, message: `User doesn't exist` });
+	if (!user)
+		throw new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.NOT_FOUND, {
+			isReadableMessage: true,
+			message: 'err.user_not_found',
+		});
 
 	const passwordMatches = await user.compare_passwords(password);
 
-	if (!passwordMatches) return c.json({ success: false, message: 'Incorrect credentials' });
+	if (!passwordMatches)
+		throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.BAD_REQUEST, {
+			isReadableMessage: true,
+			message: 'err.invalid_password',
+		});
 
 	const userId = user._id.toString();
 	const authTokenPayload: AuthenticatorContextPayload = { id: userId, email: user.email };
@@ -35,16 +44,21 @@ authPublicEndpointController.post('/sign-in', zValidator('json', signInReqSchema
 				email: user.email,
 				username: user.username,
 				picture: user.picture,
+				createdAt: user.createdAt,
 			},
 		},
 	});
 });
 
-authPublicEndpointController.post('/sign-up', zValidator('json', signUpReqSchema), async c => {
+authPublicEndpointController.post('/sign-up', schemaValidator('json', signUpReqSchema), async c => {
 	const { email, username, password } = c.req.valid('json');
 	const userExists = await User.duplicate_email_exists(email);
 
-	if (userExists) return c.json({ success: false, message: 'Duplicate email' });
+	if (userExists)
+		throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.BAD_REQUEST, {
+			isReadableMessage: true,
+			message: 'err.duplicate_email',
+		});
 
 	const user = new User({ email, username, password });
 	await user.save();
@@ -65,12 +79,13 @@ authPublicEndpointController.post('/sign-up', zValidator('json', signUpReqSchema
 				email: user.email,
 				username: user.username,
 				picture: user.picture,
+				createdAt: user.createdAt,
 			},
 		},
 	});
 });
 
-authPublicEndpointController.post('/google', zValidator('json', googleOAuthReSchema), async c => {
+authPublicEndpointController.post('/google', schemaValidator('json', googleOAuthReSchema), async c => {
 	const { code } = c.req.valid('json');
 
 	const { GOOGLE_CLIENT_ID, GOOGLE_SECRET, GOOGLE_OAUTH_REDIRECT_URI } = process.env;
@@ -80,7 +95,11 @@ authPublicEndpointController.post('/google', zValidator('json', googleOAuthReSch
 		tokens: { id_token: idToken = '' },
 	} = await googleOAuth2Client.getToken(code);
 
-	if (!idToken) return c.json({ success: false, message: 'No ID Token' });
+	if (!idToken)
+		throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.BAD_REQUEST, {
+			isReadableMessage: false,
+			message: 'No ID Token.',
+		});
 
 	const ticket = await googleOAuth2Client.verifyIdToken({ idToken, audience: GOOGLE_CLIENT_ID });
 
@@ -116,6 +135,7 @@ authPublicEndpointController.post('/google', zValidator('json', googleOAuthReSch
 				email: user.email,
 				username: user.username,
 				picture: user.picture,
+				createdAt: user.createdAt,
 			},
 		},
 	});
