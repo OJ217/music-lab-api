@@ -1,16 +1,11 @@
 import bcrypt from 'bcryptjs';
-import { Document, Model, model, Schema, Types } from 'mongoose';
-
-import { EarTrainingPracticeSessionDocument } from '../ear-training/practice-session.model';
+import { Document, Model, model, Schema } from 'mongoose';
 
 export interface IUser {
 	email: string;
 	username: string;
 	picture?: string;
 	password?: string;
-	earTraining: {
-		practiceSessions: Types.Array<EarTrainingPracticeSessionDocument['_id']>;
-	};
 	createdAt: Date;
 	updatedAt: Date;
 	compare_passwords: ComparePasswordsMethod;
@@ -40,14 +35,6 @@ const userSchema = new Schema<IUser>(
 			type: String,
 			required: false,
 			select: false,
-		},
-		earTraining: {
-			practiceSessions: [
-				{
-					type: Schema.Types.ObjectId,
-					ref: 'ear_training.practice_session',
-				},
-			],
 		},
 	},
 	{ timestamps: true }

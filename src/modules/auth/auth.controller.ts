@@ -1,14 +1,15 @@
 import { OAuth2Client } from 'google-auth-library';
 
 import { schemaValidator } from '@/middleware/validation.middleware';
-import { AuthenticatorContextPayload, ModuleController } from '@/types';
+import { AuthenticatorContextPayload } from '@/types';
+import { ApiController, ApiResponse, HttpStatus } from '@/util/api.util';
 import { generateToken } from '@/util/auth.util';
-import { ApiErrorCode, ApiException, HttpStatus } from '@/util/error.util';
+import { ApiErrorCode, ApiException } from '@/util/error.util';
 
 import User from '../user/user.model';
 import { googleOAuthReSchema, signInReqSchema, signUpReqSchema } from './auth.validation';
 
-const { public: authPublicEndpointController } = new ModuleController();
+const { public: authPublicEndpointController } = new ApiController();
 
 authPublicEndpointController.post('/sign-in', schemaValidator('json', signInReqSchema), async c => {
 	const { email, password } = c.req.valid('json');
@@ -34,18 +35,15 @@ authPublicEndpointController.post('/sign-in', schemaValidator('json', signInReqS
 	const accessToken = generateToken(userId, authTokenPayload, { jwtType: 'access_token' });
 	const refreshToken = generateToken(userId, authTokenPayload, { jwtType: 'refresh_token' });
 
-	return c.json({
-		success: true,
-		data: {
-			accessToken,
-			refreshToken,
-			user: {
-				_id: user.id,
-				email: user.email,
-				username: user.username,
-				picture: user.picture,
-				createdAt: user.createdAt,
-			},
+	return ApiResponse.create(c, {
+		accessToken,
+		refreshToken,
+		user: {
+			_id: user.id,
+			email: user.email,
+			username: user.username,
+			picture: user.picture,
+			createdAt: user.createdAt,
 		},
 	});
 });
@@ -69,18 +67,15 @@ authPublicEndpointController.post('/sign-up', schemaValidator('json', signUpReqS
 	const accessToken = generateToken(userId, authTokenPayload, { jwtType: 'access_token' });
 	const refreshToken = generateToken(userId, authTokenPayload, { jwtType: 'refresh_token' });
 
-	return c.json({
-		success: true,
-		data: {
-			accessToken,
-			refreshToken,
-			user: {
-				_id: user.id,
-				email: user.email,
-				username: user.username,
-				picture: user.picture,
-				createdAt: user.createdAt,
-			},
+	return ApiResponse.create(c, {
+		accessToken,
+		refreshToken,
+		user: {
+			_id: user.id,
+			email: user.email,
+			username: user.username,
+			picture: user.picture,
+			createdAt: user.createdAt,
 		},
 	});
 });
@@ -125,18 +120,15 @@ authPublicEndpointController.post('/google', schemaValidator('json', googleOAuth
 	const accessToken = generateToken(userId, authTokenPayload, { jwtType: 'access_token' });
 	const refreshToken = generateToken(userId, authTokenPayload, { jwtType: 'refresh_token' });
 
-	return c.json({
-		success: true,
-		data: {
-			accessToken,
-			refreshToken,
-			user: {
-				_id: user.id,
-				email: user.email,
-				username: user.username,
-				picture: user.picture,
-				createdAt: user.createdAt,
-			},
+	return ApiResponse.create(c, {
+		accessToken,
+		refreshToken,
+		user: {
+			_id: user.id,
+			email: user.email,
+			username: user.username,
+			picture: user.picture,
+			createdAt: user.createdAt,
 		},
 	});
 });

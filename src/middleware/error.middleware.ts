@@ -1,15 +1,9 @@
 import { ErrorHandler } from 'hono';
 import { ZodError } from 'zod';
 
-import { ApiErrorCode, ApiException, HttpStatus } from '@/util/error.util';
+import { HttpStatus } from '@/util/api.util';
+import { ApiError, ApiErrorCode, ApiException } from '@/util/error.util';
 import { translate, TranslationKey } from '@/util/translation.util';
-
-export interface ApiError {
-	code: ApiErrorCode;
-	message: string;
-	isReadableMessage: boolean;
-	data?: any;
-}
 
 type ResolveError = (err: any, locale: string | undefined) => { apiError: ApiError; httpStatus: HttpStatus };
 const resolveError: ResolveError = (err, locale) => {

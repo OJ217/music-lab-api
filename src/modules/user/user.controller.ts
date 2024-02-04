@@ -1,11 +1,10 @@
 import { schemaValidator } from '@/middleware/validation.middleware';
-import { ModuleController } from '@/types';
-import { HttpStatus } from '@/util/error.util';
+import { ApiController, HttpStatus } from '@/util/api.util';
 import { objectIdParamSchema } from '@/util/validation.util';
 
 import User from './user.model';
 
-const { private: userPrivateEndpointController } = new ModuleController();
+const { private: userPrivateEndpointController } = new ApiController();
 
 userPrivateEndpointController.get('/', async c => {
 	const users = await User.find();

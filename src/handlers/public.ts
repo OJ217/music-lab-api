@@ -25,7 +25,7 @@ app.use('*', cors({ credentials: true, origin: ['http://localhost:3000', 'https:
 app.use('*', setUpLambda);
 
 // ** Routes
-app.get('/', c => c.text('Music Lab Public API 🎹🔬 (Powered by Hono x Serverless 🚀)'));
+app.get('/', c => c.body('Music Lab Public API 🎹🔬 (Powered by Hono x Serverless 🚀)'));
 app.route('/articles', articlePublicEndpointController);
 app.route('/auth', authPublicEndpointController);
 

@@ -2,14 +2,14 @@ import dayjs from 'dayjs';
 import { Types } from 'mongoose';
 
 import { schemaValidator } from '@/middleware/validation.middleware';
-import { ModuleController } from '@/types';
-import { ApiErrorCode, ApiException, HttpStatus } from '@/util/error.util';
+import { ApiController, ApiResponse, HttpStatus } from '@/util/api.util';
+import { ApiErrorCode, ApiException } from '@/util/error.util';
 import { objectIdParamSchema } from '@/util/validation.util';
 
 import EarTrainingPracticeSession, { EarTrainingPracticeType } from './practice-session.model';
 import { createEarTrainingPracticeSessionSchema, earTrainingExerciseTypeSchema, fetchEarTrainingPracticeSessionSchema } from './practice-session.validation';
 
-const { private: earTrainingPracticeSessionPrivateEndpointController } = new ModuleController();
+const { private: earTrainingPracticeSessionPrivateEndpointController } = new ApiController();
 
 earTrainingPracticeSessionPrivateEndpointController.post('/', schemaValidator('json', createEarTrainingPracticeSessionSchema), async c => {
 	const userId = c.env.authenticator?.id;
@@ -17,13 +17,7 @@ earTrainingPracticeSessionPrivateEndpointController.post('/', schemaValidator('j
 
 	try {
 		const practiceSession = await EarTrainingPracticeSession.create({ ...earTrainingracticeSessionData, userId });
-
-		return c.json({
-			success: true,
-			data: {
-				_id: practiceSession._id,
-			},
-		});
+		return ApiResponse.create(c, { _id: practiceSession._id }, HttpStatus.CREATED);
 	} catch (error) {
 		console.log(error);
 		throw new ApiException(HttpStatus.INTERNAL_ERROR, ApiErrorCode.INTERNAL_ERROR, {
@@ -59,10 +53,7 @@ earTrainingPracticeSessionPrivateEndpointController.get('/', schemaValidator('qu
 			}
 		);
 
-		return c.json({
-			success: true,
-			data: practiceSessions,
-		});
+		return ApiResponse.create(c, practiceSessions);
 	} catch (error) {
 		console.log(error);
 		throw new ApiException(HttpStatus.INTERNAL_ERROR, ApiErrorCode.INTERNAL_ERROR, {
@@ -119,10 +110,7 @@ earTrainingPracticeSessionPrivateEndpointController.get('/activity', schemaValid
 			}));
 		}
 
-		return c.json({
-			success: true,
-			data: practiceSessionActivity,
-		});
+		return ApiResponse.create(c, practiceSessionActivity);
 	} catch (error) {
 		console.log(error);
 		throw new ApiException(HttpStatus.INTERNAL_ERROR, ApiErrorCode.INTERNAL_ERROR, {
@@ -167,10 +155,7 @@ earTrainingPracticeSessionPrivateEndpointController.get('/scores', async c => {
 			},
 		]);
 
-		return c.json({
-			success: true,
-			data: practiceSessionScores,
-		});
+		return ApiResponse.create(c, practiceSessionScores);
 	} catch (error) {
 		console.log(error);
 		throw new ApiException(HttpStatus.INTERNAL_ERROR, ApiErrorCode.INTERNAL_ERROR, {
@@ -229,10 +214,7 @@ earTrainingPracticeSessionPrivateEndpointController.get('/progress', schemaValid
 			}));
 		}
 
-		return c.json({
-			success: true,
-			data: practiceSessionProgress,
-		});
+		return ApiResponse.create(c, practiceSessionProgress);
 	} catch (error) {
 		console.log(error);
 		throw new ApiException(HttpStatus.INTERNAL_ERROR, ApiErrorCode.INTERNAL_ERROR, {
@@ -268,10 +250,7 @@ earTrainingPracticeSessionPrivateEndpointController.get('/:id', schemaValidator(
 			);
 		}
 
-		return c.json({
-			success: true,
-			data: practiceSession,
-		});
+		return ApiResponse.create(c, practiceSession);
 	} catch (error) {
 		console.log(error);
 		throw new ApiException(HttpStatus.INTERNAL_ERROR, ApiErrorCode.INTERNAL_ERROR, {

@@ -1,19 +1,4 @@
-import { ApiError } from '@/middleware/error.middleware';
-
-export enum HttpStatus {
-	OK = 200,
-	CREATED = 201,
-	NO_CONTENT = 204,
-	BAD_REQUEST = 400,
-	UNAUTHORIZED = 401,
-	FORBIDDEN = 403,
-	NOT_FOUND = 404,
-	CONFLICT = 409,
-	INTERNAL_ERROR = 500,
-	NOT_IMPLEMENTED = 501,
-	BAD_GATEWAY = 502,
-	GATEWAY_TIMEOUT = 504,
-}
+import { HttpStatus } from './api.util';
 
 export enum ApiErrorCode {
 	NOT_IMPLEMENTED = 994,
@@ -27,6 +12,13 @@ export enum ApiErrorCode {
 const errorMessages = ['err.invalid_credentials', 'err.invalid_password', 'err.user_not_found', 'err.duplicate_email', 'err.not_implemented', 'err.not_found'] as const;
 
 export type ApiErrorMessage = (typeof errorMessages)[number];
+
+export interface ApiError {
+	code: ApiErrorCode;
+	message: string;
+	isReadableMessage: boolean;
+	data?: any;
+}
 
 export class ApiException extends Error {
 	status: HttpStatus;

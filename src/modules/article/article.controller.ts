@@ -1,13 +1,13 @@
 import { schemaValidator } from '@/middleware/validation.middleware';
-import { ModuleController } from '@/types';
-import { ApiErrorCode, ApiException, HttpStatus } from '@/util/error.util';
+import { ApiController, ApiResponse, HttpStatus } from '@/util/api.util';
+import { ApiErrorCode, ApiException } from '@/util/error.util';
 import { objectIdParamSchema, paginationSchema } from '@/util/validation.util';
 
 import User from '../user/user.model';
 import Article from './article.model';
 import { createArticleSchema, createArticlesSchema, updateArticleSchema } from './article.validation';
 
-const { public: articlePublicEndpointController, private: articlePrivateEndpointController } = new ModuleController();
+const { public: articlePublicEndpointController, private: articlePrivateEndpointController } = new ApiController();
 
 articlePublicEndpointController.get('/', schemaValidator('query', paginationSchema), async c => {
 	const { page, limit } = c.req.valid('query');
@@ -25,7 +25,7 @@ articlePublicEndpointController.get('/', schemaValidator('query', paginationSche
 		}
 	);
 
-	return c.json({ success: true, data: articles });
+	return ApiResponse.create(c, { docs: articles });
 });
 
 articlePublicEndpointController.get('/:id', schemaValidator('param', objectIdParamSchema), async c => {
@@ -37,7 +37,7 @@ articlePublicEndpointController.get('/:id', schemaValidator('param', objectIdPar
 			message: 'err.user_not_found',
 		});
 
-	return c.json({ success: true, doc: article });
+	return ApiResponse.create(c, article);
 });
 
 // ** Private Endpoints
@@ -48,7 +48,7 @@ articlePrivateEndpointController.post('/', schemaValidator('json', createArticle
 	try {
 		const article = await Article.create({ ...articleData, author: userId });
 		await User.findByIdAndUpdate(userId, { $push: { articles: article._id } });
-		return c.json({ sucess: true, data: article });
+		return ApiResponse.create(c, article);
 	} catch (error) {
 		console.log(error);
 		throw new ApiException(HttpStatus.INTERNAL_ERROR, ApiErrorCode.INTERNAL_ERROR, {
@@ -66,7 +66,7 @@ articlePrivateEndpointController.post('/list', schemaValidator('json', createArt
 		const articles = await Article.insertMany(articlesData);
 		const articleIds = articles.map(a => a._id);
 		await User.findByIdAndUpdate(userId, { $push: { articles: articleIds } }).lean();
-		return c.json({ success: true, data: { docs: articles } });
+		return ApiResponse.create(c, { docs: articles }, HttpStatus.CREATED);
 	} catch (error) {
 		console.log(error);
 		throw new ApiException(HttpStatus.INTERNAL_ERROR, ApiErrorCode.INTERNAL_ERROR, {
@@ -82,7 +82,7 @@ articlePrivateEndpointController.patch('/:id', schemaValidator('param', objectId
 
 	try {
 		const article = await Article.findByIdAndUpdate(articleId, articleData, { new: true }).lean();
-		return c.json({ success: true, data: article });
+		return ApiResponse.create(c, article);
 	} catch (error) {
 		console.log(error);
 		throw new ApiException(HttpStatus.INTERNAL_ERROR, ApiErrorCode.INTERNAL_ERROR, {
@@ -100,7 +100,7 @@ articlePrivateEndpointController.delete('/:id', schemaValidator('param', objectI
 		await Article.findByIdAndDelete(articleId);
 		await User.findByIdAndUpdate(userId, { $pull: { articles: articleId } }).lean();
 
-		return c.json({ success: true, message: 'Deleted' });
+		return ApiResponse.create(c, { message: 'Deleted' });
 	} catch (error) {
 		console.log(error);
 		throw new ApiException(HttpStatus.INTERNAL_ERROR, ApiErrorCode.INTERNAL_ERROR, {

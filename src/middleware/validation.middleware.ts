@@ -29,6 +29,6 @@ export const schemaValidator = <
 			throw result.error;
 		}
 
-		const data = result.data as z.infer<T>;
+		const data = result.data;
 		return data;
 	});

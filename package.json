@@ -20,7 +20,7 @@
 		"google-auth-library": "^9.1.0",
 		"hono": "^3.12.6",
 		"jsonwebtoken": "^9.0.2",
-		"mongoose": "^8.0.1",
+		"mongoose": "^8.1.0",
 		"mongoose-paginate-v2": "^1.7.4",
 		"zod": "^3.22.4"
 	}
