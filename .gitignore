@@ -1,7 +1,9 @@
 node_modules
 dist
 lambda.zip
+cert
 .yarn
 .env
 .serverless
 .esbuild
+.DS_Store
