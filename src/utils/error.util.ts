@@ -26,7 +26,7 @@ export class ApiException extends Error {
 	isReadableMessage: boolean;
 	data?: any;
 
-	constructor(status: HttpStatus, code: ApiErrorCode, message: { isReadableMessage: false; message: string } | { isReadableMessage: true; message: ApiErrorMessage }, data?: any) {
+	constructor(status: HttpStatus, code: ApiErrorCode, message: { isReadableMessage?: false; message: string } | { isReadableMessage: true; message: ApiErrorMessage }, data?: any) {
 		super(message.message);
 		Object.setPrototypeOf(this, ApiException.prototype);
 		this.constructor = ApiException;

@@ -5,15 +5,13 @@ import { csrf } from 'hono/csrf';
 import { logger } from 'hono/logger';
 import { poweredBy } from 'hono/powered-by';
 import { secureHeaders } from 'hono/secure-headers';
-import { Hono } from 'hono/tiny';
 
-import { errorHandler } from '@/middleware/error.middleware';
-import { setUpLambda } from '@/middleware/lambda.middleware';
-import { articlePublicEndpointController } from '@/modules/article/article.controller';
-import { authPublicEndpointController } from '@/modules/auth/auth.controller';
-import { PublicEndpointBindings } from '@/types';
+import errorHandler from '@/middleware/error.middleware';
+import setUpLambda from '@/middleware/lambda.middleware';
+import authPublicController from '@/modules/auth/auth.controller';
+import { PublicApiController } from '@/utils/api.util';
 
-const app = new Hono<{ Bindings: PublicEndpointBindings }>();
+const app = new PublicApiController();
 
 // ** Middleware
 app.use('*', logger());
@@ -25,11 +23,12 @@ app.use('*', cors({ credentials: true, origin: ['http://localhost:3000', 'https:
 app.use('*', setUpLambda);
 
 // ** Routes
-app.get('/', c => c.body('Music Lab Public API 🎹🔬 (Powered by Hono x Serverless 🚀)'));
-app.route('/articles', articlePublicEndpointController);
-app.route('/auth', authPublicEndpointController);
+app.get('/', c => c.text('Music Lab API 🎹🔬 (Powered by Hono 🔥 x Serverless 🚀)'));
+app.route('/auth', authPublicController);
 
 // ** Error handler
 app.onError(errorHandler);
+
+console.table(app.routes.map(r => ({ path: r.path, method: r.method })));
 
 export const publicEndpointHandler = handle(app);

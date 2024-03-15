@@ -1,8 +1,7 @@
 {
 	"files.exclude": {
 		"node_modules": true,
-		".esbuild": true,
-		".serverless": true
+		".esbuild": true
 	},
 
 	"editor.defaultFormatter": "esbenp.prettier-vscode",

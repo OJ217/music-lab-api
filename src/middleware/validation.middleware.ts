@@ -4,7 +4,7 @@ import { z, ZodSchema } from 'zod';
 
 type HasUndefined<T> = undefined extends T ? true : false;
 
-export const schemaValidator = <
+const schemaValidator = <
 	T extends ZodSchema,
 	Target extends keyof ValidationTargets,
 	E extends Env,
@@ -32,3 +32,5 @@ export const schemaValidator = <
 		const data = result.data;
 		return data;
 	});
+
+export default schemaValidator;

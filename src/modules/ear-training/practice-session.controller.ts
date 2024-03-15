@@ -1,38 +1,69 @@
 import dayjs from 'dayjs';
-import { Types } from 'mongoose';
+import { ObjectId } from 'mongodb';
+import { z } from 'zod';
 
-import { schemaValidator } from '@/middleware/validation.middleware';
-import { ApiController, ApiResponse, HttpStatus } from '@/util/api.util';
-import { ApiErrorCode, ApiException } from '@/util/error.util';
-import { objectIdParamSchema } from '@/util/validation.util';
+import schemaValidator from '@/middleware/validation.middleware';
+import { EarTrainingType } from '@/types';
+import { ApiResponse, HttpStatus, PrivateApiController } from '@/utils/api.util';
+import { ApiErrorCode, ApiException } from '@/utils/error.util';
+import { earTrainingTypeSchema, objectIdParamSchema, paginationSchema } from '@/utils/validation.util';
 
-import EarTrainingPracticeSession, { EarTrainingPracticeType } from './practice-session.model';
-import { createEarTrainingPracticeSessionSchema, earTrainingExerciseTypeSchema, fetchEarTrainingPracticeSessionSchema } from './practice-session.validation';
+import { EarTrainingSessionService } from './practice-session.service';
 
-const { private: earTrainingPracticeSessionPrivateEndpointController } = new ApiController();
+const earTrainingSessionController = new PrivateApiController();
 
-earTrainingPracticeSessionPrivateEndpointController.post('/', schemaValidator('json', createEarTrainingPracticeSessionSchema), async c => {
-	const userId = c.env.authenticator?.id;
-	const earTrainingracticeSessionData = c.req.valid('json');
+earTrainingSessionController.post(
+	'/',
+	schemaValidator(
+		'json',
+		z
+			.object({
+				type: z.nativeEnum(EarTrainingType),
+				duration: z.number().min(0),
+				result: z.object({
+					score: z.number().min(0).max(100),
+					correct: z.number().min(0).max(100),
+					incorrect: z.number().min(0).max(100),
+					questionCount: z.number().min(5).max(100),
+				}),
+				statistics: z
+					.array(
+						z.object({
+							score: z.number().min(0).max(100),
+							correct: z.number().min(0).max(100),
+							incorrect: z.number().min(0).max(100),
+							questionCount: z.number().min(1).max(100),
+							questionType: z.string().min(1).max(50),
+						})
+					)
+					.min(2),
+			})
+			.refine(({ result: { correct, incorrect, questionCount } }) => correct + incorrect === questionCount, { message: 'Invalid practice session result', path: ['result'] })
+			.refine(({ statistics }) => statistics.map(s => s.correct + s.incorrect === s.questionCount).every(s => s), { message: 'Invalid practice session statistics', path: ['statistics'] })
+	),
+	async c => {
+		const userId = new ObjectId(c.env.authenticator?.id);
+		const earTrainingSessionData = c.req.valid('json');
 
-	try {
-		const practiceSession = await EarTrainingPracticeSession.create({ ...earTrainingracticeSessionData, userId });
-		return ApiResponse.create(c, { _id: practiceSession._id }, HttpStatus.CREATED);
-	} catch (error) {
-		console.log(error);
-		throw new ApiException(HttpStatus.INTERNAL_ERROR, ApiErrorCode.INTERNAL_ERROR, {
-			isReadableMessage: false,
-			message: 'Could not add practice session',
-		});
+		try {
+			const { _id } = await EarTrainingSessionService.create({ ...earTrainingSessionData, userId });
+			return ApiResponse.create(c, { _id: _id.toString() }, HttpStatus.CREATED);
+		} catch (error) {
+			console.log(error);
+			throw new ApiException(HttpStatus.INTERNAL_ERROR, ApiErrorCode.INTERNAL_ERROR, {
+				isReadableMessage: false,
+				message: 'Could not add ear training session.',
+			});
+		}
 	}
-});
+);
 
-earTrainingPracticeSessionPrivateEndpointController.get('/', schemaValidator('query', fetchEarTrainingPracticeSessionSchema), async c => {
-	const userId = c.env.authenticator?.id;
+earTrainingSessionController.get('/', schemaValidator('query', paginationSchema.merge(earTrainingTypeSchema)), async c => {
+	const userId = new ObjectId(c.env.authenticator?.id);
 	const { type, limit, page } = c.req.valid('query');
 
 	try {
-		const practiceSessions = await EarTrainingPracticeSession.paginate(
+		const practiceSessions = await EarTrainingSessionService.fetchList(
 			{
 				userId,
 				type,
@@ -40,214 +71,94 @@ earTrainingPracticeSessionPrivateEndpointController.get('/', schemaValidator('qu
 			{
 				page,
 				limit,
-				sort: {
-					createdAt: -1,
-				},
-				projection: {
-					statistics: 0,
-					userId: 0,
-					__v: 0,
-				},
-				lean: true,
-				leanWithId: false,
 			}
 		);
-
 		return ApiResponse.create(c, practiceSessions);
 	} catch (error) {
 		console.log(error);
 		throw new ApiException(HttpStatus.INTERNAL_ERROR, ApiErrorCode.INTERNAL_ERROR, {
 			isReadableMessage: false,
-			message: 'Could not fetch user practice sessions',
+			message: 'Could not fetch user ear training sessions.',
 		});
 	}
 });
 
-earTrainingPracticeSessionPrivateEndpointController.get('/activity', schemaValidator('query', earTrainingExerciseTypeSchema.partial()), async c => {
-	const userId = new Types.ObjectId(c.env.authenticator?.id);
+earTrainingSessionController.get('/activity', schemaValidator('query', earTrainingTypeSchema.partial()), async c => {
+	const userId = new ObjectId(c.env.authenticator?.id);
 	const weekBeforeCurrentDate = dayjs().subtract(1, 'week').toDate();
 	const exerciseTypeQuery = c.req.valid('query');
 
 	try {
-		let practiceSessionActivity = await EarTrainingPracticeSession.aggregate<{ date: string; activity: number }>([
-			{
-				$match: {
-					userId,
-					createdAt: {
-						$gte: weekBeforeCurrentDate,
-					},
-					...(!!exerciseTypeQuery.type ? { type: exerciseTypeQuery.type } : {}),
-				},
-			},
-			{
-				$group: {
-					_id: {
-						$dateToString: {
-							format: '%Y-%m-%d',
-							date: '$createdAt',
-						},
-					},
-					activity: { $sum: '$result.questionCount' },
-				},
-			},
-			{
-				$project: {
-					_id: 0,
-					date: '$_id',
-					activity: 1,
-				},
-			},
-		]);
+		const earTrainingActivity = await EarTrainingSessionService.fetchActivity({
+			userId,
+			weekBeforeCurrentDate,
+			exerciseType: exerciseTypeQuery.type,
+		});
 
-		if (practiceSessionActivity.length > 0 && practiceSessionActivity.length < 7) {
-			const practiceSessionActivityMap = new Map(practiceSessionActivity.map(item => [item.date, item.activity]));
-
-			const currentDate = dayjs();
-
-			practiceSessionActivity = Array.from({ length: 7 }, (_, index) => currentDate.subtract(index, 'day').format('YYYY-MM-DD')).map(date => ({
-				date,
-				activity: practiceSessionActivityMap.get(date) || 0,
-			}));
-		}
-
-		return ApiResponse.create(c, practiceSessionActivity);
+		return ApiResponse.create(c, earTrainingActivity);
 	} catch (error) {
 		console.log(error);
 		throw new ApiException(HttpStatus.INTERNAL_ERROR, ApiErrorCode.INTERNAL_ERROR, {
 			isReadableMessage: false,
-			message: 'Could not fetch practice session activity',
+			message: 'Could not fetch ear training activity.',
 		});
 	}
 });
 
-earTrainingPracticeSessionPrivateEndpointController.get('/scores', async c => {
-	const userId = new Types.ObjectId(c.env.authenticator?.id);
+earTrainingSessionController.get('/scores', async c => {
+	const userId = new ObjectId(c.env.authenticator?.id);
 	const startOfMonth = dayjs().startOf('month').toDate();
 
 	try {
-		const practiceSessionScores = await EarTrainingPracticeSession.aggregate<{ type: EarTrainingPracticeType; correct: number; questionCount: number }>([
-			{
-				$match: {
-					userId,
-					createdAt: {
-						$gte: startOfMonth,
-					},
-				},
-			},
-			{
-				$group: {
-					_id: '$type',
-					correct: {
-						$sum: '$result.correct',
-					},
-					questionCount: {
-						$sum: '$result.questionCount',
-					},
-				},
-			},
-			{
-				$project: {
-					_id: 0,
-					type: '$_id',
-					correct: 1,
-					questionCount: 1,
-				},
-			},
-		]);
-
-		return ApiResponse.create(c, practiceSessionScores);
+		const earTrainingExerciseScores = await EarTrainingSessionService.fetchExerciseScores({
+			userId,
+			startOfMonth,
+		});
+		return ApiResponse.create(c, earTrainingExerciseScores);
 	} catch (error) {
 		console.log(error);
 		throw new ApiException(HttpStatus.INTERNAL_ERROR, ApiErrorCode.INTERNAL_ERROR, {
 			isReadableMessage: false,
-			message: 'Could not fetch practice session scores',
+			message: 'Could not fetch ear training scores.',
 		});
 	}
 });
 
-earTrainingPracticeSessionPrivateEndpointController.get('/progress', schemaValidator('query', earTrainingExerciseTypeSchema.partial()), async c => {
-	const userId = new Types.ObjectId(c.env.authenticator?.id);
+earTrainingSessionController.get('/progress', schemaValidator('query', earTrainingTypeSchema.partial()), async c => {
+	const userId = new ObjectId(c.env.authenticator?.id);
 	const weekBeforeCurrentDate = dayjs().subtract(1, 'week').toDate();
 	const exerciseTypeQuery = c.req.valid('query');
 
 	try {
-		let practiceSessionProgress = await EarTrainingPracticeSession.aggregate<{ date: string; correct: number; questionCount: number }>([
-			{
-				$match: {
-					userId,
-					createdAt: {
-						$gte: weekBeforeCurrentDate,
-					},
-					...(!!exerciseTypeQuery?.type ? { type: exerciseTypeQuery.type } : {}),
-				},
-			},
-			{
-				$group: {
-					_id: {
-						$dateToString: {
-							format: '%Y-%m-%d',
-							date: '$createdAt',
-						},
-					},
-					correct: { $sum: '$result.correct' },
-					questionCount: { $sum: '$result.questionCount' },
-				},
-			},
-			{
-				$project: {
-					_id: 0,
-					date: '$_id',
-					correct: 1,
-					questionCount: 1,
-				},
-			},
-		]);
-
-		if (practiceSessionProgress.length > 0 && practiceSessionProgress.length < 7) {
-			const practiceSessionProgressMap = new Map(practiceSessionProgress.map(item => [item.date, { correct: item.correct, questionCount: item.questionCount }]));
-
-			const currentDate = dayjs();
-
-			practiceSessionProgress = Array.from({ length: 7 }, (_, index) => currentDate.subtract(index, 'day').format('YYYY-MM-DD')).map(date => ({
-				date,
-				...(practiceSessionProgressMap.get(date) || { correct: 0, questionCount: 0 }),
-			}));
-		}
-
-		return ApiResponse.create(c, practiceSessionProgress);
+		const earTrainingProgress = await EarTrainingSessionService.fetchProgress({
+			userId,
+			weekBeforeCurrentDate,
+			exerciseType: exerciseTypeQuery.type,
+		});
+		return ApiResponse.create(c, earTrainingProgress);
 	} catch (error) {
 		console.log(error);
 		throw new ApiException(HttpStatus.INTERNAL_ERROR, ApiErrorCode.INTERNAL_ERROR, {
 			isReadableMessage: false,
-			message: 'Could not fetch practice session activity',
+			message: 'Could not fetch ear training progress.',
 		});
 	}
 });
 
-earTrainingPracticeSessionPrivateEndpointController.get('/:id', schemaValidator('param', objectIdParamSchema), async c => {
-	const userId = c.env.authenticator?.id;
-	const { id: practiceSessionId } = c.req.valid('param');
+earTrainingSessionController.get('/:id', schemaValidator('param', objectIdParamSchema), async c => {
+	const userId = new ObjectId(c.env.authenticator?.id);
+	const { id: sessionId } = c.req.valid('param');
 
 	try {
-		const practiceSession = await EarTrainingPracticeSession.findOne(
-			{
-				_id: practiceSessionId,
-				userId,
-			},
-			{
-				userId: 0,
-				__v: 0,
-			}
-		);
+		const practiceSession = await EarTrainingSessionService.fetchById({
+			sessionId,
+			userId,
+		});
 
 		if (!practiceSession) {
-			return c.json(
-				{
-					success: false,
-					message: 'Not found',
-				},
-				HttpStatus.NOT_FOUND
-			);
+			throw new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.NOT_FOUND, {
+				message: 'Ear training session not found.',
+			});
 		}
 
 		return ApiResponse.create(c, practiceSession);
@@ -255,9 +166,9 @@ earTrainingPracticeSessionPrivateEndpointController.get('/:id', schemaValidator(
 		console.log(error);
 		throw new ApiException(HttpStatus.INTERNAL_ERROR, ApiErrorCode.INTERNAL_ERROR, {
 			isReadableMessage: false,
-			message: 'Could not fetch user practice session',
+			message: 'Could not fetch ear training session.',
 		});
 	}
 });
 
-export { earTrainingPracticeSessionPrivateEndpointController };
+export default earTrainingSessionController;

@@ -5,17 +5,15 @@ import { csrf } from 'hono/csrf';
 import { logger } from 'hono/logger';
 import { poweredBy } from 'hono/powered-by';
 import { secureHeaders } from 'hono/secure-headers';
-import { Hono } from 'hono/tiny';
 
-import { authenticateUserHeaders } from '@/middleware/auth.middleware';
-import { errorHandler } from '@/middleware/error.middleware';
-import { setUpLambda } from '@/middleware/lambda.middleware';
-import { articlePrivateEndpointController } from '@/modules/article/article.controller';
-import { earTrainingPracticeSessionPrivateEndpointController } from '@/modules/ear-training/practice-session.controller';
-import { userPrivateEndpointController } from '@/modules/user/user.controller';
-import { PrivateEndpointBindings } from '@/types';
+import authenticateUserHeaders from '@/middleware/auth.middleware';
+import errorHandler from '@/middleware/error.middleware';
+import setUpLambda from '@/middleware/lambda.middleware';
+import earTrainingPracticeSessionController from '@/modules/ear-training/practice-session.controller';
+import userController from '@/modules/user/user.controller';
+import { PrivateApiController } from '@/utils/api.util';
 
-const app = new Hono<{ Bindings: PrivateEndpointBindings }>();
+const app = new PrivateApiController();
 
 // ** Middleware
 app.use('*', logger());
@@ -27,10 +25,8 @@ app.use('*', cors({ credentials: true, origin: ['http://localhost:3000', 'https:
 app.use('*', setUpLambda, authenticateUserHeaders);
 
 // **Routes
-app.get('/', c => c.text('Music Lab Private API 🎹🔬 (Powered by Hono x Serverless 🚀)'));
-app.route('/api/articles', articlePrivateEndpointController);
-app.route('/api/users', userPrivateEndpointController);
-app.route('/api/ear-training/practice-session', earTrainingPracticeSessionPrivateEndpointController);
+app.route('/api/user', userController);
+app.route('/api/ear-training/practice-session', earTrainingPracticeSessionController);
 
 // ** Error handler
 app.onError(errorHandler);

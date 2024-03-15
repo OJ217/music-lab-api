@@ -1,14 +1,12 @@
-import { LambdaContext } from 'hono/aws-lambda';
+export enum EarTrainingType {
+	IntervalIdentification = 'interval-identification',
+	ChordIdentification = 'chord-identification',
+	ModeIdentification = 'mode-identification',
+}
 
-export type PublicEndpointBindings = {
-	lambdaContext: LambdaContext;
-};
-
-export type PrivateEndpointBindings = PublicEndpointBindings & {
-	authenticator: AuthenticatorContextPayload;
-};
-
-export type AuthenticatorContextPayload = {
-	id: string;
-	email: string;
-};
+export enum PlayingMode {
+	Harmonic = 'harmonic',
+	Ascending = 'ascending',
+	Descending = 'descending',
+	AscendingAndDescending = 'ascending-descending',
+}

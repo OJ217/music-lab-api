@@ -41,6 +41,9 @@ functions:
 
 package:
     individually: true
+    excludeDevDependencies: true
+    patterns:
+        - '!node_modules/**'
 
 plugins:
     - serverless-esbuild

@@ -1,10 +1,10 @@
-import { MiddlewareHandler } from 'hono';
-
-import { PrivateEndpointBindings } from '@/types';
-import connectDB from '@/util/db.util';
+import { IPrivateMiddlewareHandler } from '@/types/api.type';
+import { HttpStatus } from '@/utils/api.util';
+import { connectDB } from '@/utils/db.util';
+import { ApiErrorCode, ApiException } from '@/utils/error.util';
 
 // ** AWS Lambda Function Setup Middleware
-export const setUpLambda: MiddlewareHandler<{ Bindings: PrivateEndpointBindings }> = async (c, next) => {
+const setUpLambda: IPrivateMiddlewareHandler = async (c, next) => {
 	// ** Response Headers
 	const { logStreamName, awsRequestId, invokedFunctionArn } = c.env.lambdaContext;
 	c.header('x-amzn-cw-logstream', logStreamName);
@@ -14,6 +14,16 @@ export const setUpLambda: MiddlewareHandler<{ Bindings: PrivateEndpointBindings 
 	// ** Event Loop
 	c.env.lambdaContext.callbackWaitsForEmptyEventLoop = false;
 
-	void connectDB();
-	await next();
+	try {
+		await connectDB();
+		await next();
+	} catch (error) {
+		console.info(error);
+		throw new ApiException(HttpStatus.INTERNAL_ERROR, ApiErrorCode.INTERNAL_ERROR, {
+			isReadableMessage: false,
+			message: 'MongoDB: Error connecting to database 🔗❌',
+		});
+	}
 };
+
+export default setUpLambda;

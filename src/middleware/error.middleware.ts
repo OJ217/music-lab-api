@@ -1,9 +1,9 @@
 import { ErrorHandler } from 'hono';
 import { ZodError } from 'zod';
 
-import { HttpStatus } from '@/util/api.util';
-import { ApiError, ApiErrorCode, ApiException } from '@/util/error.util';
-import { translate, TranslationKey } from '@/util/translation.util';
+import { HttpStatus } from '@/utils/api.util';
+import { ApiError, ApiErrorCode, ApiException } from '@/utils/error.util';
+import { translate, TranslationKey } from '@/utils/translation.util';
 
 type ResolveError = (err: any, locale: string | undefined) => { apiError: ApiError; httpStatus: HttpStatus };
 const resolveError: ResolveError = (err, locale) => {
@@ -51,7 +51,9 @@ const resolveError: ResolveError = (err, locale) => {
 	}
 };
 
-export const errorHandler: ErrorHandler = (err, c) => {
+const errorHandler: ErrorHandler = (err, c) => {
 	const { apiError, httpStatus } = resolveError(err, c.req.header('Accept-Language'));
 	return c.json({ success: false, error: apiError }, httpStatus);
 };
+
+export default errorHandler;

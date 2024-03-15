@@ -1,41 +1,59 @@
-import { schemaValidator } from '@/middleware/validation.middleware';
-import { ApiController, HttpStatus } from '@/util/api.util';
-import { objectIdParamSchema } from '@/util/validation.util';
+import { ObjectId } from 'mongodb';
+import { z } from 'zod';
 
-import User from './user.model';
+import schemaValidator from '@/middleware/validation.middleware';
+import { ApiResponse, HttpStatus, PrivateApiController } from '@/utils/api.util';
+import { ApiErrorCode, ApiException } from '@/utils/error.util';
+import { nonEmptyObjectSchema } from '@/utils/validation.util';
 
-const { private: userPrivateEndpointController } = new ApiController();
+import { UserService } from './user.service';
 
-userPrivateEndpointController.get('/', async c => {
-	const users = await User.find();
-	return c.json({ success: true, docs: users });
-});
+const userController = new PrivateApiController();
 
-userPrivateEndpointController.get('/me', async c => {
-	const user = await User.findById(c.env.authenticator.id);
+userController.get('/', async c => {
+	const user = await UserService.fetchById(new ObjectId(c.env.authenticator.id));
 
 	if (!user) {
-		return c.json({ success: false, message: 'User not found' }, HttpStatus.NOT_FOUND);
+		throw new ApiException(HttpStatus.NOT_FOUND, ApiErrorCode.NOT_FOUND, {
+			message: 'User not found.',
+		});
 	}
 
-	return c.json({
-		success: true,
-		user: {
-			_id: user.id,
-			email: user.email,
-			username: user.username,
-			picture: user.picture,
-			createdAt: user.createdAt,
-		},
+	return ApiResponse.create(c, {
+		_id: user._id,
+		email: user.email,
+		username: user.username,
+		picture: user.picture,
+		createdAt: user.createdAt,
 	});
 });
 
-userPrivateEndpointController.get('/:id', schemaValidator('param', objectIdParamSchema), async c => {
-	const user = await User.findById(c.req.param('id'));
+userController.patch(
+	'/',
+	schemaValidator(
+		'json',
+		nonEmptyObjectSchema(
+			z
+				.object({
+					username: z.string().min(4).max(20),
+					picture: z.string().url(),
+				})
+				.partial()
+		)
+	),
+	async c => {
+		const userId = new ObjectId(c.env.authenticator.id);
+		const userData = c.req.valid('json');
 
-	if (!user) return c.json({ success: false, message: 'Not found!' });
+		const { updated, found } = await UserService.updateById(userId, userData);
 
-	return c.json({ success: true, doc: user });
-});
+		if (!found)
+			throw new ApiException(HttpStatus.UNAUTHORIZED, ApiErrorCode.UNAUTHORIZED, {
+				message: 'User not found.',
+			});
 
-export { userPrivateEndpointController };
+		return ApiResponse.create(c, { updated });
+	}
+);
+
+export default userController;
