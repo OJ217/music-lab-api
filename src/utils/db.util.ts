@@ -58,15 +58,21 @@ class MongoService {
 	}
 }
 
-const mongoInstance = new MongoService(process.env.MONGO_URI as string, process.env.MONGO_DB as string);
+export const mongoInstance = new MongoService(process.env.MONGO_URI as string, process.env.MONGO_DB as string);
 export const mongoModelClient = new MongoModelClient();
 
 export const connectDB = async () => {
 	if (!mongoInstance.clientConnected) {
 		await mongoInstance.connect();
 		console.info('MongoDB: Creating new database connection 🔗✅');
+
 		mongoModelClient.initialize(mongoInstance.getDb());
 		await mongoModelClient.updateSchemas();
+
+		process.on('exit', async () => {
+			await mongoInstance.disconnect();
+			console.log('MongoDB: Closed database connection');
+		});
 	} else {
 		console.info('MongoDB: Using cached database instance 🔗✅');
 	}

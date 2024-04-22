@@ -9,7 +9,9 @@ import { secureHeaders } from 'hono/secure-headers';
 import authenticateUserHeaders from '@/middleware/auth.middleware';
 import errorHandler from '@/middleware/error.middleware';
 import setUpLambda from '@/middleware/lambda.middleware';
-import earTrainingPracticeSessionController from '@/modules/ear-training/practice-session.controller';
+import earTrainingAnalyticsController from '@/modules/ear-training/analytics/ear-training-analytics.controller';
+import earTrainingSessionController from '@/modules/ear-training/session/ear-training-session.controller';
+import earTrainingStreakController from '@/modules/ear-training/streak/ear-training-streak.controller';
 import userController from '@/modules/user/user.controller';
 import { PrivateApiController } from '@/utils/api.util';
 
@@ -26,7 +28,9 @@ app.use('*', setUpLambda, authenticateUserHeaders);
 
 // **Routes
 app.route('/api/user', userController);
-app.route('/api/ear-training/practice-session', earTrainingPracticeSessionController);
+app.route('/api/ear-training/sessions', earTrainingSessionController);
+app.route('/api/ear-training/analytics', earTrainingAnalyticsController);
+app.route('/api/ear-training/streaks', earTrainingStreakController);
 
 // ** Error handler
 app.onError(errorHandler);

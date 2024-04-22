@@ -2,15 +2,37 @@ service: music-lab-api
 
 frameworkVersion: '3'
 
+plugins:
+    - serverless-esbuild
+    - serverless-offline
+    - serverless-dotenv-plugin
+    - serverless-domain-manager
+
 custom:
     defaultStage: local
     stage: ${opt:stage, self:custom.defaultStage}
     dotenv:
         path: .env/.env.${self:custom.stage}
+    domainEnabled:
+        local: false
+        dev: true
+        prod: true
+    apiDomains:
+        local: ''
+        dev: 'dev.api.music-lab.app'
+        prod: 'api.music-lab.app'
+    customDomain:
+        domainName: ${self:custom.apiDomains.${self:custom.stage}}
+        basePath: ''
+        stage: ${self:custom.stage}
+        certificateName: api.music-lab.app
+        createRoute53Record: true
+        enabled: ${self:custom.domainEnabled.${self:custom.stage}}
+        endpointType: regional
+        apiType: http
     esbuild:
         minify: true
         bundle: true
-        treeShaking: true
         watch:
             pattern: ['src/**/*.ts']
     serverless-offline:
@@ -41,11 +63,6 @@ functions:
 
 package:
     individually: true
-    excludeDevDependencies: true
     patterns:
-        - '!node_modules/**'
-
-plugins:
-    - serverless-esbuild
-    - serverless-offline
-    - serverless-dotenv-plugin
+        - '!cert/**'
+        - cert/${self:custom.stage}/**

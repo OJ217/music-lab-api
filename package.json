@@ -14,24 +14,26 @@
 		"dev": "serverless offline start --verbose --httpPort 5000",
 		"deploy-dev": "serverless deploy --stage dev",
 		"deploy-prod": "serverless deploy --stage prod",
-		"generate-local-cert": "chmod +x ./scripts/generate-cert.sh && ./scripts/generate-cert.sh --comment music-lab-office-api --stage local",
-		"generate-dev-cert": "chmod +x ./scripts/generate-cert.sh && ./scripts/generate-cert.sh --comment music-lab-office-api --stage dev",
-		"generate-prod-cert": "chmod +x ./scripts/generate-cert.sh && ./scripts/generate-cert.sh --comment music-lab-office-api --stage prod"
+		"generate-local-cert": "chmod +x ./scripts/generate-cert.sh && ./scripts/generate-cert.sh --comment music-lab-app-api --stage local",
+		"generate-dev-cert": "chmod +x ./scripts/generate-cert.sh && ./scripts/generate-cert.sh --comment music-lab-app-api --stage dev",
+		"generate-prod-cert": "chmod +x ./scripts/generate-cert.sh && ./scripts/generate-cert.sh --comment music-lab-app-api --stage prod"
 	},
 	"devDependencies": {
 		"@types/bcryptjs": "^2.4.5",
 		"@types/jsonwebtoken": "^9.0.4",
+		"@types/node": "^20.11.29",
 		"esbuild": "^0.17.19",
 		"serverless": "^3.35.2",
+		"serverless-domain-manager": "^7.3.8",
 		"serverless-dotenv-plugin": "^6.0.0",
 		"serverless-esbuild": "^1.48.5",
-		"serverless-offline": "^13.2.0"
+		"serverless-offline": "^13.3.4"
 	},
 	"dependencies": {
 		"bcryptjs": "^2.4.3",
 		"dayjs": "^1.11.10",
 		"google-auth-library": "^9.1.0",
-		"hono": "^3.12.6",
+		"hono": "^4.2.5",
 		"jsonwebtoken": "^9.0.2",
 		"mongodb": "^6.5.0",
 		"papr": "^15.2.1",

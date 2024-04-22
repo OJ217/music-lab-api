@@ -29,6 +29,4 @@ app.route('/auth', authPublicController);
 // ** Error handler
 app.onError(errorHandler);
 
-console.table(app.routes.map(r => ({ path: r.path, method: r.method })));
-
 export const publicEndpointHandler = handle(app);
