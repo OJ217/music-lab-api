@@ -58,7 +58,7 @@ export class EarTrainingSessionService {
 				result: 1,
 				statistics: 1,
 				createdAt: 1,
-				_id: 0,
+				_id: 1,
 			},
 		});
 	}
