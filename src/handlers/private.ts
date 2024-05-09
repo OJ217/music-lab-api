@@ -6,7 +6,7 @@ import { logger } from 'hono/logger';
 import { poweredBy } from 'hono/powered-by';
 import { secureHeaders } from 'hono/secure-headers';
 
-import authenticateUserHeaders from '@/middleware/auth.middleware';
+import { authenticateUserCookies } from '@/middleware/auth.middleware';
 import errorHandler from '@/middleware/error.middleware';
 import setUpLambda from '@/middleware/lambda.middleware';
 import earTrainingAnalyticsController from '@/modules/ear-training/analytics/ear-training-analytics.controller';
@@ -24,7 +24,7 @@ app.use('*', secureHeaders());
 app.use('*', compress({ encoding: 'gzip' }));
 app.use('*', csrf({ origin: ['http://localhost:3000', 'https://music-lab-next.vercel.app', 'https://www.music-lab.app', 'https://www.dev.music-lab.app'] }));
 app.use('*', cors({ credentials: true, origin: ['http://localhost:3000', 'https://music-lab-next.vercel.app', 'https://www.music-lab.app', 'https://www.dev.music-lab.app'] }));
-app.use('*', setUpLambda, authenticateUserHeaders);
+app.use('*', setUpLambda, authenticateUserCookies);
 
 // **Routes
 app.route('/api/user', userController);

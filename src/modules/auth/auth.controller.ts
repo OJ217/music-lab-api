@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import schemaValidator from '@/middleware/validation.middleware';
 import { UserService } from '@/modules/user/user.service';
-import { AuthService, HashService } from '@/services/auth.service';
+import { AuthCredentialsService, AuthService, HashService } from '@/services/auth.service';
 import { IAuthenticatorContextPayload } from '@/types/api.type';
 import { ApiResponse, HttpStatus, PublicApiController } from '@/utils/api.util';
 import { ApiErrorCode, ApiException } from '@/utils/error.util';
@@ -47,6 +47,8 @@ authPublicController.post(
 
 		const accessToken = AuthService.generateToken(userId, authTokenPayload, { jwtType: 'access_token' });
 		const refreshToken = AuthService.generateToken(userId, authTokenPayload, { jwtType: 'refresh_token' });
+
+		AuthCredentialsService.setCredentials(c, accessToken, refreshToken);
 
 		return ApiResponse.create(c, {
 			accessToken,
@@ -97,6 +99,8 @@ authPublicController.post(
 
 		const accessToken = AuthService.generateToken(userId, authTokenPayload, { jwtType: 'access_token' });
 		const refreshToken = AuthService.generateToken(userId, authTokenPayload, { jwtType: 'refresh_token' });
+
+		AuthCredentialsService.setCredentials(c, accessToken, refreshToken);
 
 		return ApiResponse.create(
 			c,
@@ -166,6 +170,8 @@ authPublicController.post(
 
 		const accessToken = AuthService.generateToken(userId, authTokenPayload, { jwtType: 'access_token' });
 		const refreshToken = AuthService.generateToken(userId, authTokenPayload, { jwtType: 'refresh_token' });
+
+		AuthCredentialsService.setCredentials(c, accessToken, refreshToken);
 
 		return ApiResponse.create(c, {
 			accessToken,

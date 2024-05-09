@@ -10,6 +10,23 @@ import { EarTrainingAnalyticsService } from '../ear-training.service';
 
 const earTrainingAnalyticsController = new PrivateApiController();
 
+earTrainingAnalyticsController.get('/', async c => {
+	const currentDay = dayjs();
+	const userId = new ObjectId(c.env.authenticator.id);
+
+	try {
+		const earTrainingOverallStatistics = await EarTrainingAnalyticsService.fetchOverallStatistics({ userId, currentDay });
+
+		return ApiResponse.create(c, earTrainingOverallStatistics);
+	} catch (error) {
+		console.error(error);
+
+		throw new ApiException(HttpStatus.INTERNAL_ERROR, ApiErrorCode.INTERNAL_ERROR, {
+			message: 'Could not fetch ear training overall statistics',
+		});
+	}
+});
+
 earTrainingAnalyticsController.get('/activity', schemaValidator('query', earTrainingTypeSchema.partial()), async c => {
 	const userId = new ObjectId(c.env.authenticator?.id);
 	const exerciseTypeQuery = c.req.valid('query');
@@ -32,12 +49,10 @@ earTrainingAnalyticsController.get('/activity', schemaValidator('query', earTrai
 
 earTrainingAnalyticsController.get('/scores', async c => {
 	const userId = new ObjectId(c.env.authenticator?.id);
-	const startOfMonth = dayjs().startOf('month').toDate();
 
 	try {
 		const earTrainingExerciseScores = await EarTrainingAnalyticsService.fetchExerciseScores({
 			userId,
-			startOfMonth,
 		});
 		return ApiResponse.create(c, earTrainingExerciseScores);
 	} catch (error) {
@@ -66,6 +81,28 @@ earTrainingAnalyticsController.get('/progress', schemaValidator('query', earTrai
 		throw new ApiException(HttpStatus.INTERNAL_ERROR, ApiErrorCode.INTERNAL_ERROR, {
 			isReadableMessage: false,
 			message: 'Could not fetch ear training progress.',
+		});
+	}
+});
+
+earTrainingAnalyticsController.get('/:type', schemaValidator('param', earTrainingTypeSchema), async c => {
+	const currentDay = dayjs();
+	const userId = new ObjectId(c.env.authenticator.id);
+	const exerciseTypeParam = c.req.valid('param');
+
+	try {
+		const earTrainingExerciseStatistics = await EarTrainingAnalyticsService.fetchExerciseStatistics({
+			userId,
+			currentDay,
+			exerciseType: exerciseTypeParam.type,
+		});
+
+		return ApiResponse.create(c, earTrainingExerciseStatistics);
+	} catch (error) {
+		console.error(error);
+
+		throw new ApiException(HttpStatus.INTERNAL_ERROR, ApiErrorCode.INTERNAL_ERROR, {
+			message: 'Could not fetch ear training exercise statistics',
 		});
 	}
 });

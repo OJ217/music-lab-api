@@ -1,9 +1,9 @@
-import dayjs from 'dayjs';
+import dayjs, { Dayjs } from 'dayjs';
 import { ObjectId } from 'mongodb';
 import { DocumentForInsert, schema, types } from 'papr';
 
 import { PaginationService } from '@/services/db.service';
-import { EarTrainingType } from '@/types';
+import { EarTrainingType, earTrainingTypes } from '@/types';
 import { mongoModelClient } from '@/utils/db.util';
 
 const earTrainingSessionSchema = schema(
@@ -68,20 +68,183 @@ export class EarTrainingSessionService {
 	}
 }
 
+// ** Ear Training Analytics Service Types
+interface IEarTrainingStatisticsBase {
+	correct: number;
+	activity: number;
+}
+
+type IDateRangeStatistics = { date: string } & IEarTrainingStatisticsBase;
+type IExerciseTypeStatistics = { type: string } & IEarTrainingStatisticsBase;
+
+interface IOverallStatisticsResponse {
+	dateRangeStatistics: Array<IDateRangeStatistics>;
+	exerciseTypeStatistics: Array<IExerciseTypeStatistics>;
+}
+
+type IExerciseStatisticsResponse = Array<IDateRangeStatistics>;
+
+// ** Ear Training Analytics Services
 export class EarTrainingAnalyticsService {
 	private constructor() {}
 
 	private static readonly EarTrainingSession = EarTrainingSession;
 
+	private static calculateDateRange(currentDay: Dayjs) {
+		const range = Math.max(7, currentDay.date());
+		const rangeEnd = currentDay.date(range);
+		const rangeStartDate = currentDay.startOf('month').startOf('day').toDate();
+		const rangeEndDate = rangeEnd.toDate();
+
+		return {
+			range,
+			rangeEnd,
+			rangeStartDate,
+			rangeEndDate,
+		};
+	}
+
+	public static async fetchOverallStatistics({ userId, currentDay }: { userId: ObjectId; currentDay: Dayjs }): Promise<IOverallStatisticsResponse> {
+		const { range, rangeEnd, rangeEndDate, rangeStartDate } = this.calculateDateRange(currentDay);
+
+		const overallStatistics = await this.EarTrainingSession.aggregate<IOverallStatisticsResponse>([
+			{
+				$match: {
+					userId,
+					createdAt: { $gte: rangeStartDate, $lte: rangeEndDate },
+				},
+			},
+			{
+				$facet: {
+					dateRangeStatistics: [
+						{
+							$group: {
+								_id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+								correct: { $sum: '$result.correct' },
+								activity: { $sum: '$result.questionCount' },
+							},
+						},
+						{
+							$project: { _id: 0, date: '$_id', correct: 1, activity: 1 },
+						},
+					],
+					exerciseTypeStatistics: [
+						{
+							$group: {
+								_id: '$type',
+								correct: { $sum: '$result.correct' },
+								activity: { $sum: '$result.questionCount' },
+							},
+						},
+						{
+							$project: { _id: 0, type: '$_id', correct: 1, activity: 1 },
+						},
+					],
+				},
+			},
+		]);
+
+		if (!overallStatistics || overallStatistics.length === 0) {
+			return {
+				dateRangeStatistics: [],
+				exerciseTypeStatistics: [],
+			};
+		}
+
+		let { dateRangeStatistics, exerciseTypeStatistics } = overallStatistics[0];
+
+		// ** Date range statistics normalization
+		if (dateRangeStatistics.length > 0 && dateRangeStatistics.length < range) {
+			const dateRangeStatisticsMap = new Map(dateRangeStatistics.map(a => [a.date, { activity: a.activity, correct: a.correct }]));
+
+			dateRangeStatistics = Array.from({ length: range }, (_, index) => rangeEnd.subtract(index, 'day').format('YYYY-MM-DD')).map(date => ({
+				date,
+				...(dateRangeStatisticsMap.get(date) || {
+					activity: 0,
+					correct: 0,
+				}),
+			}));
+		}
+
+		// ** Exercise types statistics normalization
+		if (exerciseTypeStatistics.length > 0 && exerciseTypeStatistics.length < earTrainingTypes.length) {
+			const exerciseTypeStatisticsMap = new Map(exerciseTypeStatistics.map(s => [s.type, { activity: s.activity, correct: s.correct }]));
+
+			exerciseTypeStatistics = Array.from({ length: earTrainingTypes.length }, (_, index) => earTrainingTypes[index]).map(type => ({
+				type,
+				...(exerciseTypeStatisticsMap.get(type) || {
+					activity: 0,
+					correct: 0,
+				}),
+			}));
+		}
+
+		return {
+			dateRangeStatistics,
+			exerciseTypeStatistics,
+		};
+	}
+
+	public static async fetchExerciseStatistics({ userId, exerciseType, currentDay }: { userId: ObjectId; exerciseType: EarTrainingType; currentDay: Dayjs }): Promise<IExerciseStatisticsResponse> {
+		const { range, rangeEnd, rangeStartDate, rangeEndDate } = this.calculateDateRange(currentDay);
+
+		let exerciseStatistics = await this.EarTrainingSession.aggregate<IDateRangeStatistics>([
+			{
+				$match: {
+					userId,
+					type: exerciseType,
+					createdAt: { $gte: rangeStartDate, $lte: rangeEndDate },
+				},
+			},
+			{
+				$group: {
+					_id: {
+						$dateToString: { format: '%Y-%m-%d', date: '$createdAt' },
+					},
+					activity: { $sum: '$result.questionCount' },
+					correct: { $sum: '$result.correct' },
+				},
+			},
+			{
+				$project: { _id: 0, date: '$_id', activity: 1, correct: 1 },
+			},
+		]);
+
+		if (!exerciseStatistics) {
+			return [];
+		}
+
+		// ** Date range statistics normalization
+		if (exerciseStatistics.length > 0 && exerciseStatistics.length < range) {
+			const dateRangeStatisticsMap = new Map(exerciseStatistics.map(a => [a.date, { activity: a.activity, correct: a.correct }]));
+
+			exerciseStatistics = Array.from({ length: range }, (_, index) => rangeEnd.subtract(index, 'day').format('YYYY-MM-DD')).map(date => ({
+				date,
+				...(dateRangeStatisticsMap.get(date) || {
+					activity: 0,
+					correct: 0,
+				}),
+			}));
+		}
+
+		return exerciseStatistics;
+	}
+
 	public static async fetchActivity({ userId, exerciseType }: { userId: ObjectId; exerciseType: EarTrainingType | undefined }) {
-		const weekBeforeCurrentDate = dayjs().subtract(1, 'week').toDate();
+		const currentDay = dayjs();
+		const currentDayOfMonth = currentDay.date();
+		const rangeStartDay = currentDayOfMonth >= 7 ? currentDay.startOf('month').startOf('day') : currentDay.subtract(1, 'week').startOf('day');
+		const range = currentDayOfMonth >= 7 ? currentDayOfMonth : 7;
+		const rangeStartDate = rangeStartDay.toDate();
+		const rangeEndDate = currentDay.endOf('day').toDate();
 
 		let earTrainingActivity = await this.EarTrainingSession.aggregate<{ date: string; activity: number }>([
 			{
 				$match: {
 					userId,
 					createdAt: {
-						$gte: weekBeforeCurrentDate,
+						$gte: rangeStartDate,
+						$lte: rangeEndDate,
 					},
 					...(!!exerciseType ? { type: exerciseType } : {}),
 				},
@@ -106,50 +269,16 @@ export class EarTrainingAnalyticsService {
 			},
 		]);
 
-		if (earTrainingActivity.length > 0 && earTrainingActivity.length < 7) {
+		if (earTrainingActivity.length > 0 && earTrainingActivity.length < range) {
 			const earTrainingActivityMap = new Map(earTrainingActivity.map(item => [item.date, item.activity]));
 
-			const currentDate = dayjs();
-
-			earTrainingActivity = Array.from({ length: 7 }, (_, index) => currentDate.subtract(index, 'day').format('YYYY-MM-DD')).map(date => ({
+			earTrainingActivity = Array.from({ length: range }, (_, index) => currentDay.subtract(index, 'day').format('YYYY-MM-DD')).map(date => ({
 				date,
 				activity: earTrainingActivityMap.get(date) || 0,
 			}));
 		}
 
 		return earTrainingActivity;
-	}
-
-	public static async fetchExerciseScores({ userId, startOfMonth }: { userId: ObjectId; startOfMonth: Date }) {
-		return await this.EarTrainingSession.aggregate<{ type: EarTrainingType; correct: number; questionCount: number }>([
-			{
-				$match: {
-					userId,
-					createdAt: {
-						$gte: startOfMonth,
-					},
-				},
-			},
-			{
-				$group: {
-					_id: '$type',
-					correct: {
-						$sum: '$result.correct',
-					},
-					questionCount: {
-						$sum: '$result.questionCount',
-					},
-				},
-			},
-			{
-				$project: {
-					_id: 0,
-					type: '$_id',
-					correct: 1,
-					questionCount: 1,
-				},
-			},
-		]);
 	}
 
 	public static async fetchProgress({ userId, weekBeforeCurrentDate, exerciseType }: { userId: ObjectId; weekBeforeCurrentDate: Date; exerciseType: EarTrainingType | undefined }) {
@@ -198,6 +327,40 @@ export class EarTrainingAnalyticsService {
 
 		return earTrainingProgress;
 	}
+
+	public static async fetchExerciseScores({ userId }: { userId: ObjectId }) {
+		const startOfMonth = dayjs().startOf('month').startOf('day').toDate();
+
+		return await this.EarTrainingSession.aggregate<{ type: EarTrainingType; correct: number; questionCount: number }>([
+			{
+				$match: {
+					userId,
+					createdAt: {
+						$gte: startOfMonth,
+					},
+				},
+			},
+			{
+				$group: {
+					_id: '$type',
+					correct: {
+						$sum: '$result.correct',
+					},
+					questionCount: {
+						$sum: '$result.questionCount',
+					},
+				},
+			},
+			{
+				$project: {
+					_id: 0,
+					type: '$_id',
+					correct: 1,
+					questionCount: 1,
+				},
+			},
+		]);
+	}
 }
 
 const earTrainingProfileSchema = schema(
@@ -241,7 +404,7 @@ const earTrainingProfileSchema = schema(
 export type EarTrainingProfileDocument = (typeof earTrainingProfileSchema)[0];
 export type EarTrainingProfileOptions = (typeof earTrainingProfileSchema)[1];
 
-const EarTrainingProfile = mongoModelClient.model('music-lab-app.ear_training_profiles', earTrainingProfileSchema);
+const EarTrainingProfile = mongoModelClient.model('music_lab_app.ear_training_profiles', earTrainingProfileSchema);
 
 export class EarTrainingProfileService {
 	private constructor() {}

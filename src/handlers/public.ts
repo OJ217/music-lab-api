@@ -9,7 +9,7 @@ import { secureHeaders } from 'hono/secure-headers';
 import errorHandler from '@/middleware/error.middleware';
 import setUpLambda from '@/middleware/lambda.middleware';
 import authPublicController from '@/modules/auth/auth.controller';
-import { PublicApiController } from '@/utils/api.util';
+import { ApiResponse, PublicApiController } from '@/utils/api.util';
 
 const app = new PublicApiController();
 
@@ -23,7 +23,7 @@ app.use('*', cors({ credentials: true, origin: ['http://localhost:3000', 'https:
 app.use('*', setUpLambda);
 
 // ** Routes
-app.get('/', c => c.text('Music Lab API 🎹🔬 (Powered by Hono 🔥 x Serverless 🚀)'));
+app.get('/', c => ApiResponse.create(c, 'Music Lab API service 🎹🔬 (Powered by Hono 🔥 x Serverless 🚀)'));
 app.route('/auth', authPublicController);
 
 // ** Error handler
