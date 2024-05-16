@@ -27,64 +27,6 @@ earTrainingAnalyticsController.get('/', async c => {
 	}
 });
 
-earTrainingAnalyticsController.get('/activity', schemaValidator('query', earTrainingTypeSchema.partial()), async c => {
-	const userId = new ObjectId(c.env.authenticator?.id);
-	const exerciseTypeQuery = c.req.valid('query');
-
-	try {
-		const earTrainingActivity = await EarTrainingAnalyticsService.fetchActivity({
-			userId,
-			exerciseType: exerciseTypeQuery.type,
-		});
-
-		return ApiResponse.create(c, earTrainingActivity);
-	} catch (error) {
-		console.log(error);
-		throw new ApiException(HttpStatus.INTERNAL_ERROR, ApiErrorCode.INTERNAL_ERROR, {
-			isReadableMessage: false,
-			message: 'Could not fetch ear training activity.',
-		});
-	}
-});
-
-earTrainingAnalyticsController.get('/scores', async c => {
-	const userId = new ObjectId(c.env.authenticator?.id);
-
-	try {
-		const earTrainingExerciseScores = await EarTrainingAnalyticsService.fetchExerciseScores({
-			userId,
-		});
-		return ApiResponse.create(c, earTrainingExerciseScores);
-	} catch (error) {
-		console.log(error);
-		throw new ApiException(HttpStatus.INTERNAL_ERROR, ApiErrorCode.INTERNAL_ERROR, {
-			isReadableMessage: false,
-			message: 'Could not fetch ear training scores.',
-		});
-	}
-});
-
-earTrainingAnalyticsController.get('/progress', schemaValidator('query', earTrainingTypeSchema.partial()), async c => {
-	const userId = new ObjectId(c.env.authenticator?.id);
-	const weekBeforeCurrentDate = dayjs().subtract(1, 'week').toDate();
-	const exerciseTypeQuery = c.req.valid('query');
-
-	try {
-		const earTrainingProgress = await EarTrainingAnalyticsService.fetchProgress({
-			userId,
-			weekBeforeCurrentDate,
-			exerciseType: exerciseTypeQuery.type,
-		});
-		return ApiResponse.create(c, earTrainingProgress);
-	} catch (error) {
-		console.log(error);
-		throw new ApiException(HttpStatus.INTERNAL_ERROR, ApiErrorCode.INTERNAL_ERROR, {
-			isReadableMessage: false,
-			message: 'Could not fetch ear training progress.',
-		});
-	}
-});
-
 earTrainingAnalyticsController.get('/:type', schemaValidator('param', earTrainingTypeSchema), async c => {
 	const currentDay = dayjs();
 	const userId = new ObjectId(c.env.authenticator.id);

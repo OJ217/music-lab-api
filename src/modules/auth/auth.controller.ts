@@ -83,6 +83,13 @@ authPublicController.post(
 			)
 	),
 	async c => {
+		throw new ApiException(HttpStatus.NOT_IMPLEMENTED, ApiErrorCode.NOT_IMPLEMENTED, {
+			isReadableMessage: true,
+			message: 'err.not_implemented',
+		});
+
+		// ** Currently not available
+
 		const { email, username, password } = c.req.valid('json');
 		const userExists = await UserService.fetchByEmail(email);
 
@@ -92,7 +99,7 @@ authPublicController.post(
 				message: 'err.duplicate_email',
 			});
 
-		const user = await UserService.create({ email, username, password });
+		const user = await UserService.create({ email, username, password, firstName: '', lastName: '' });
 
 		const userId = user._id.toString();
 		const authTokenPayload: IAuthenticatorContextPayload = { id: userId, email: user.email };
@@ -140,7 +147,6 @@ authPublicController.post(
 
 		if (!idToken)
 			throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.BAD_REQUEST, {
-				isReadableMessage: false,
 				message: 'No ID Token.',
 			});
 
@@ -151,8 +157,10 @@ authPublicController.post(
 		const email = payload?.email;
 		const username = payload?.name;
 		const picture = payload?.picture;
+		const firstName = payload?.given_name;
+		const lastName = payload?.family_name;
 
-		if (!email || !username)
+		if (!email || !username || !firstName || !lastName)
 			throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.BAD_REQUEST, {
 				message: 'Invalid payload.',
 			});
@@ -160,7 +168,7 @@ authPublicController.post(
 		let user = await UserService.fetchByEmail(email);
 
 		if (!user) {
-			user = await UserService.create({ email, username, picture });
+			user = await UserService.create({ email, username, picture, firstName, lastName });
 		} else if (!user.picture && picture) {
 			await UserService.updateById(user._id, { picture });
 		}

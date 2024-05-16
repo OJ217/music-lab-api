@@ -80,8 +80,8 @@ const authenticateUserHeaders: MiddlewareHandler<{ Bindings: IPrivateEndpointBin
 	const accessToken = AuthService.extractToken(accessTokenRaw);
 
 	if (accessToken.valid) {
-		console.info('Authenticating using access token 🔑✅');
 		c.env.authenticator = accessToken.decoded.payload;
+		console.info('Authenticating using access token 🔑✅');
 		return await next();
 	}
 
