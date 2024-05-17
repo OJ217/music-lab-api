@@ -14,7 +14,7 @@ const TOKEN_ISSUER = 'music-lab-api';
 const TOKEN_AUDIENCE = ['music-lab-web', 'music-lab-pwa'];
 
 const tokenExpiries: Record<JwtType, number> = {
-	access_token: dayjs().add(1, 'day').unix(),
+	access_token: dayjs().add(30, 'days').unix(),
 	refresh_token: dayjs().add(30, 'days').unix(),
 	common: dayjs().add(15, 'minutes').unix(),
 };

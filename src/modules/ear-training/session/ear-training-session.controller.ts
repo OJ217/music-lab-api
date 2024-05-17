@@ -51,11 +51,11 @@ earTrainingSessionController.post(
 
 		// ** Initialize db transaction
 		const session = mongoInstance.startSession();
-		session.startTransaction({ readPreference: 'primary', readConcern: { level: 'local' }, writeConcern: { w: 'majority' } });
+		session.startTransaction();
 
 		// ** User fetch
-
 		const user = await UserService.fetchById(userId);
+
 		if (!user) {
 			await session.abortTransaction();
 
@@ -67,12 +67,14 @@ earTrainingSessionController.post(
 
 		// ** Daily streak logging
 		const earTrainingProfile = user.earTrainingProfile;
+
 		if (!(isSameDay(currentDate, earTrainingProfile.currentStreak.lastLogDate) && earTrainingProfile.currentStreak.count !== 0)) {
 			const updatedStreak = await UserEarTrainingProfileService.logStreak({
 				userId,
 				currentDate,
 				currentStreak: earTrainingProfile.currentStreak,
 				bestStreak: earTrainingProfile?.bestStreak,
+				session,
 			});
 
 			if (updatedStreak?.currentStreak === undefined || updatedStreak?.currentStreak === null) {
@@ -86,7 +88,8 @@ earTrainingSessionController.post(
 
 		// ** XP calculation
 		const xp = calculateXP(earTrainingSessionData.result.correct, earTrainingSessionData.result.score, earTrainingSessionData.type);
-		const updatedXP = await UserEarTrainingProfileService.addStatsAndXP({ userId, xp: xp + user.xp, duration: earTrainingSessionData.duration });
+		const updatedXP = await UserEarTrainingProfileService.addStatsAndXP({ userId, xp, duration: earTrainingSessionData.duration, session });
+
 		if (updatedXP === undefined || updatedXP === null) {
 			await session.abortTransaction();
 
@@ -96,7 +99,7 @@ earTrainingSessionController.post(
 		}
 
 		// ** Session creation
-		const { _id } = await EarTrainingSessionService.create({ ...earTrainingSessionData, userId });
+		const { _id } = await EarTrainingSessionService.create({ ...earTrainingSessionData, userId }, session);
 
 		await session.commitTransaction();
 		await session.endSession();

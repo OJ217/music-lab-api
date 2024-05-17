@@ -1,4 +1,4 @@
-import dayjs, { Dayjs } from 'dayjs';
+import { Dayjs } from 'dayjs';
 import { ClientSession, ObjectId } from 'mongodb';
 import { DocumentForInsert, schema, types } from 'papr';
 

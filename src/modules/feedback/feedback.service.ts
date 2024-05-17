@@ -32,7 +32,7 @@ const feedbackSchema = schema(
 type FeedbackDocument = (typeof feedbackSchema)[0];
 type FeedbackOptions = (typeof feedbackSchema)[1];
 
-const Feedback = mongoModelClient.model('music_lab_app.ear_training_sessions', feedbackSchema);
+const Feedback = mongoModelClient.model('music_lab_app.feedbacks', feedbackSchema);
 
 export class FeedbackService {
 	private constructor() {}

@@ -9,10 +9,10 @@ import { isYesterday } from '@/utils/date.util';
 import { mongoModelClient } from '@/utils/db.util';
 
 export enum InstitutionType {
-	UNIVERSITY = 'niversity',
-	COLLEGE = 'College',
-	HIGH_SCHOOL = 'High School',
-	OTHER = 'Other',
+	UNIVERSITY = 'university',
+	COLLEGE = 'college',
+	HIGH_SCHOOL = 'high_school',
+	OTHER = 'other',
 }
 
 const userSchema = schema(
@@ -40,6 +40,7 @@ const userSchema = schema(
 		}),
 		picture: types.string({
 			minLength: 1,
+			required: false,
 		}),
 		institution: types.object(
 			{
@@ -77,17 +78,14 @@ const userSchema = schema(
 					}),
 					{ maxItems: Object.keys(EarTrainingType).length, uniqueItems: true, required: true }
 				),
-				stats: types.object(
-					{
-						totalSessions: types.number({
-							minimum: 0,
-						}),
-						totalDuration: types.number({
-							minimum: 0,
-						}),
-					},
-					{ required: true }
-				),
+				stats: types.object({
+					totalSessions: types.number({
+						minimum: 0,
+					}),
+					totalDuration: types.number({
+						minimum: 0,
+					}),
+				}),
 			},
 			{ required: true }
 		),
@@ -173,8 +171,8 @@ export class UserEarTrainingProfileService {
 			{
 				$inc: {
 					xp,
-					'earTrainingProfile.stats.totalSession': 1,
-					'earTrainingProfile.stats.totalDuration:': duration,
+					'earTrainingProfile.stats.totalSessions': 1,
+					'earTrainingProfile.stats.totalDuration': duration,
 				},
 			},
 			{

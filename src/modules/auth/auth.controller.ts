@@ -34,7 +34,7 @@ authPublicController.post(
 				message: 'Please use different authentication provider.',
 			});
 
-		const passwordMatches = HashService.compareHash(password, user.password);
+		const passwordMatches = await HashService.compareHash(password, user.password);
 
 		if (!passwordMatches)
 			throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.BAD_REQUEST, {
@@ -51,14 +51,29 @@ authPublicController.post(
 		AuthCredentialsService.setCredentials(c, accessToken, refreshToken);
 
 		return ApiResponse.create(c, {
-			accessToken,
-			refreshToken,
-			user: {
-				_id: user._id,
-				email: user.email,
-				username: user.username,
-				picture: user.picture,
-				createdAt: user.createdAt,
+			auth: {
+				accessToken,
+				refreshToken,
+				user: {
+					_id: user._id,
+					email: user.email,
+					username: user.username,
+					picture: user.picture,
+					createdAt: user.createdAt,
+				},
+			},
+			meta: {
+				profile: {
+					firstName: user.firstName,
+					lastName: user.lastName,
+					institution: user.institution,
+					picture: user.picture,
+					createdAt: user.createdAt,
+				},
+				earTrainingProfile: {
+					xp: user.xp,
+					...user.earTrainingProfile,
+				},
 			},
 		});
 	}
@@ -160,10 +175,16 @@ authPublicController.post(
 		const firstName = payload?.given_name;
 		const lastName = payload?.family_name;
 
-		if (!email || !username || !firstName || !lastName)
+		if (!email || !username)
 			throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.BAD_REQUEST, {
 				message: 'Invalid payload.',
 			});
+
+		if (!['ochiroo032373@gmail.com'].includes(email)) {
+			throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.BAD_REQUEST, {
+				message: 'Invalid email.',
+			});
+		}
 
 		let user = await UserService.fetchByEmail(email);
 
@@ -181,15 +202,59 @@ authPublicController.post(
 
 		AuthCredentialsService.setCredentials(c, accessToken, refreshToken);
 
+		const something = {
+			auth: {
+				accessToken,
+				refreshToken,
+				user: {
+					_id: user._id,
+					email: user.email,
+					username: user.username,
+					picture: user.picture,
+					createdAt: user.createdAt,
+				},
+			},
+			meta: {
+				profile: {
+					firstName: user.firstName,
+					lastName: user.lastName,
+					institution: user.institution,
+					picture: user.picture,
+					createdAt: user.createdAt,
+				},
+				earTrainingProfile: {
+					xp: user.xp,
+					...user.earTrainingProfile,
+				},
+			},
+		};
+
+		something.meta.earTrainingProfile.bestStreak;
+
 		return ApiResponse.create(c, {
-			accessToken,
-			refreshToken,
-			user: {
-				_id: userId,
-				email,
-				username,
-				createdAt: user.createdAt,
-				...(!!picture && { picture }),
+			auth: {
+				accessToken,
+				refreshToken,
+				user: {
+					_id: user._id,
+					email: user.email,
+					username: user.username,
+					picture: user.picture,
+					createdAt: user.createdAt,
+				},
+			},
+			meta: {
+				profile: {
+					firstName: user.firstName,
+					lastName: user.lastName,
+					institution: user.institution,
+					picture: user.picture,
+					createdAt: user.createdAt,
+				},
+				earTrainingProfile: {
+					xp: user.xp,
+					...user.earTrainingProfile,
+				},
 			},
 		});
 	}
