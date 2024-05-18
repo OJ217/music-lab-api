@@ -12,8 +12,8 @@
 	"license": "MIT",
 	"scripts": {
 		"dev": "serverless offline start --verbose --httpPort 5000",
-		"deploy-dev": "serverless deploy --stage dev",
-		"deploy-prod": "serverless deploy --stage prod",
+		"deploy-dev": "serverless deploy --stage dev --verbose",
+		"deploy-prod": "serverless deploy --stage prod --verbose",
 		"migrate-create": "STAGE=local migrate-mongo create",
 		"migrate-local-up": "STAGE=local migrate-mongo up",
 		"migrate-dev-up": "STAGE=dev migrate-mongo up",

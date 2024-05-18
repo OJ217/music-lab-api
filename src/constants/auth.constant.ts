@@ -78,5 +78,7 @@ export const USER_EMAILS = [
 	'cactusmino@gmail.com',
 	'Tserentogtokhtelmas@gmail.com',
 	'tserentogtokhtelmas@gmail.com',
+	'shikhi.g.muk.edu2020@gmail.com',
+	'gantogtohg201@gmail.com',
 ];
 export const AUTHORIZED_EMAILS = [...ADMIN_EMAILS, ...USER_EMAILS];
