@@ -67,6 +67,7 @@ earTrainingSessionController.post(
 
 		// ** Daily streak logging
 		const earTrainingProfile = user.earTrainingProfile;
+		let streakUpdated = false;
 
 		if (!(isSameDay(currentDate, earTrainingProfile.currentStreak.lastLogDate) && earTrainingProfile.currentStreak.count !== 0)) {
 			const updatedStreak = await UserEarTrainingProfileService.logStreak({
@@ -84,11 +85,18 @@ earTrainingSessionController.post(
 					message: 'Could not log streak.',
 				});
 			}
+
+			streakUpdated = true;
 		}
 
 		// ** XP calculation
 		const xp = calculateXP(earTrainingSessionData.result.correct, earTrainingSessionData.result.score, earTrainingSessionData.type);
-		const updatedXP = await UserEarTrainingProfileService.addStatsAndXP({ userId, xp, duration: earTrainingSessionData.duration, session });
+		const updatedXP = await UserEarTrainingProfileService.addStatsAndXP({
+			userId,
+			xp,
+			duration: earTrainingSessionData.duration,
+			session,
+		});
 
 		if (updatedXP === undefined || updatedXP === null) {
 			await session.abortTransaction();
@@ -99,7 +107,13 @@ earTrainingSessionController.post(
 		}
 
 		// ** Session creation
-		const { _id } = await EarTrainingSessionService.create({ ...earTrainingSessionData, userId }, session);
+		const { _id } = await EarTrainingSessionService.create(
+			{
+				...earTrainingSessionData,
+				userId,
+			},
+			session
+		);
 
 		await session.commitTransaction();
 		await session.endSession();
@@ -109,6 +123,7 @@ earTrainingSessionController.post(
 			{
 				_id: _id.toString(),
 				xp,
+				streakUpdated,
 			},
 			HttpStatus.CREATED
 		);

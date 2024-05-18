@@ -9,7 +9,7 @@ export enum ApiErrorCode {
 	INTERNAL_ERROR = 999,
 }
 
-const errorMessages = ['err.invalid_credentials', 'err.invalid_password', 'err.user_not_found', 'err.duplicate_email', 'err.not_implemented', 'err.not_found'] as const;
+const errorMessages = ['err.invalid_credentials', 'err.invalid_password', 'err.user_not_found', 'err.duplicate_email', 'err.not_implemented', 'err.not_found', 'err.currently_unauthorized'] as const;
 
 export type ApiErrorMessage = (typeof errorMessages)[number];
 

@@ -9,6 +9,7 @@ import { isYesterday } from '@/utils/date.util';
 import { mongoModelClient } from '@/utils/db.util';
 
 export enum InstitutionType {
+	CONSERVATORY = 'conservatory',
 	UNIVERSITY = 'university',
 	COLLEGE = 'college',
 	HIGH_SCHOOL = 'high_school',

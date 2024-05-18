@@ -1,8 +1,9 @@
 import { OAuth2Client } from 'google-auth-library';
 import { z } from 'zod';
 
+import { AUTHORIZED_EMAILS } from '@/constants/auth.constant';
 import schemaValidator from '@/middleware/validation.middleware';
-import { UserService } from '@/modules/user/user.service';
+import { InstitutionType, UserService } from '@/modules/user/user.service';
 import { AuthCredentialsService, AuthService, HashService } from '@/services/auth.service';
 import { IAuthenticatorContextPayload } from '@/types/api.type';
 import { ApiResponse, HttpStatus, PublicApiController } from '@/utils/api.util';
@@ -180,16 +181,27 @@ authPublicController.post(
 				message: 'Invalid payload.',
 			});
 
-		if (!['ochiroo032373@gmail.com'].includes(email)) {
+		if (!AUTHORIZED_EMAILS.includes(email)) {
 			throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.BAD_REQUEST, {
-				message: 'Invalid email.',
+				isReadableMessage: true,
+				message: 'err.currently_unauthorized',
 			});
 		}
 
 		let user = await UserService.fetchByEmail(email);
 
 		if (!user) {
-			user = await UserService.create({ email, username, picture, firstName, lastName });
+			user = await UserService.create({
+				email,
+				username,
+				picture,
+				firstName,
+				lastName,
+				institution: {
+					name: 'Mongolian State Conservatory',
+					type: InstitutionType.CONSERVATORY,
+				},
+			});
 		} else if (!user.picture && picture) {
 			await UserService.updateById(user._id, { picture });
 		}
@@ -201,35 +213,6 @@ authPublicController.post(
 		const refreshToken = AuthService.generateToken(userId, authTokenPayload, { jwtType: 'refresh_token' });
 
 		AuthCredentialsService.setCredentials(c, accessToken, refreshToken);
-
-		const something = {
-			auth: {
-				accessToken,
-				refreshToken,
-				user: {
-					_id: user._id,
-					email: user.email,
-					username: user.username,
-					picture: user.picture,
-					createdAt: user.createdAt,
-				},
-			},
-			meta: {
-				profile: {
-					firstName: user.firstName,
-					lastName: user.lastName,
-					institution: user.institution,
-					picture: user.picture,
-					createdAt: user.createdAt,
-				},
-				earTrainingProfile: {
-					xp: user.xp,
-					...user.earTrainingProfile,
-				},
-			},
-		};
-
-		something.meta.earTrainingProfile.bestStreak;
 
 		return ApiResponse.create(c, {
 			auth: {

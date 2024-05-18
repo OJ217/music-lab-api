@@ -2,7 +2,7 @@ import { MiddlewareHandler } from 'hono';
 import { getCookie, setCookie } from 'hono/cookie';
 import { ObjectId } from 'mongodb';
 
-import { AUTH_COOKIE_KEYS, AUTH_COOKIE_OPTIONS } from '@/constants/auth.constant';
+import { AUTH_COOKIE_KEYS, AUTH_COOKIE_OPTIONS, AUTH_HEADER_KEYS } from '@/constants/auth.constant';
 import { UserService } from '@/modules/user/user.service';
 import { AuthCredentialsService, AuthService } from '@/services/auth.service';
 import { IAuthenticatorContextPayload, IPrivateEndpointBindings } from '@/types/api.type';
@@ -69,8 +69,8 @@ export const authenticateUserCookies: MiddlewareHandler<{ Bindings: IPrivateEndp
 
 // ** For authentication using headers
 const authenticateUserHeaders: MiddlewareHandler<{ Bindings: IPrivateEndpointBindings }> = async (c, next) => {
-	const accessTokenRaw = c.req.header('Music-Lab-X-Access-Token') as string;
-	const refreshTokenRaw = c.req.header('Music-Lab-X-Refresh-Token') as string;
+	const accessTokenRaw = c.req.header(AUTH_HEADER_KEYS.ACCESS_TOKEN) as string;
+	const refreshTokenRaw = c.req.header(AUTH_HEADER_KEYS.REFRESH_TOKEN) as string;
 
 	if (!accessTokenRaw)
 		throw new ApiException(HttpStatus.UNAUTHORIZED, ApiErrorCode.UNAUTHORIZED, {
@@ -110,7 +110,7 @@ const authenticateUserHeaders: MiddlewareHandler<{ Bindings: IPrivateEndpointBin
 		};
 
 		const reIssuedAccessToken = AuthService.generateToken(userId, authTokenPayload, { jwtType: 'access_token' });
-		c.header('Music-Lab-X-Access-Token', reIssuedAccessToken);
+		c.header(AUTH_HEADER_KEYS.ACCESS_TOKEN, reIssuedAccessToken);
 
 		console.log('Reissuing access token 🛠️✅');
 		c.env.authenticator = authTokenPayload;
