@@ -22,6 +22,7 @@ const schemaValidator = <
 	target: Target,
 	schema: T
 ): MiddlewareHandler<E, P, V> =>
+	// @ts-expect-error
 	validator(target, async value => {
 		const result = await schema.safeParseAsync(value);
 

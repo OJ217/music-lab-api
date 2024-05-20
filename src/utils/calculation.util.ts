@@ -22,6 +22,13 @@ export const calculatePercentage = (part: number, total: number): number => {
 	return roundNumber((part / total) * 100);
 };
 
+/**
+ * Calculates XP based on sesison result
+ * @param correct Number of correct answers
+ * @param score Session score
+ * @param type Ear training type
+ * @returns XP
+ */
 export const calculateXP = (correct: number, score: number, type: EarTrainingType) => {
 	let accuracyBonus = 0;
 	if (score >= 90) {
