@@ -4,9 +4,4 @@ export enum EarTrainingType {
 	ModeIdentification = 'mode-identification',
 }
 
-export enum PlayingMode {
-	Harmonic = 'harmonic',
-	Ascending = 'ascending',
-	Descending = 'descending',
-	AscendingAndDescending = 'ascending-descending',
-}
+export const earTrainingTypes = Object.values(EarTrainingType);

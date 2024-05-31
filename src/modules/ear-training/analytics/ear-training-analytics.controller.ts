@@ -10,62 +10,41 @@ import { EarTrainingAnalyticsService } from '../ear-training.service';
 
 const earTrainingAnalyticsController = new PrivateApiController();
 
-earTrainingAnalyticsController.get('/activity', schemaValidator('query', earTrainingTypeSchema.partial()), async c => {
-	const userId = new ObjectId(c.env.authenticator?.id);
-	const exerciseTypeQuery = c.req.valid('query');
+earTrainingAnalyticsController.get('/', async c => {
+	const currentDay = dayjs();
+	const userId = new ObjectId(c.env.authenticator.id);
 
 	try {
-		const earTrainingActivity = await EarTrainingAnalyticsService.fetchActivity({
-			userId,
-			exerciseType: exerciseTypeQuery.type,
-		});
+		const earTrainingOverallStatistics = await EarTrainingAnalyticsService.fetchOverallStatistics({ userId, currentDay });
 
-		return ApiResponse.create(c, earTrainingActivity);
+		return ApiResponse.create(c, earTrainingOverallStatistics);
 	} catch (error) {
-		console.log(error);
+		console.error(error);
+
 		throw new ApiException(HttpStatus.INTERNAL_ERROR, ApiErrorCode.INTERNAL_ERROR, {
-			isReadableMessage: false,
-			message: 'Could not fetch ear training activity.',
+			message: 'Could not fetch ear training overall statistics',
 		});
 	}
 });
 
-earTrainingAnalyticsController.get('/scores', async c => {
-	const userId = new ObjectId(c.env.authenticator?.id);
-	const startOfMonth = dayjs().startOf('month').toDate();
+earTrainingAnalyticsController.get('/:type', schemaValidator('param', earTrainingTypeSchema), async c => {
+	const currentDay = dayjs();
+	const userId = new ObjectId(c.env.authenticator.id);
+	const exerciseTypeParam = c.req.valid('param');
 
 	try {
-		const earTrainingExerciseScores = await EarTrainingAnalyticsService.fetchExerciseScores({
+		const earTrainingExerciseStatistics = await EarTrainingAnalyticsService.fetchExerciseStatistics({
 			userId,
-			startOfMonth,
+			currentDay,
+			exerciseType: exerciseTypeParam.type,
 		});
-		return ApiResponse.create(c, earTrainingExerciseScores);
-	} catch (error) {
-		console.log(error);
-		throw new ApiException(HttpStatus.INTERNAL_ERROR, ApiErrorCode.INTERNAL_ERROR, {
-			isReadableMessage: false,
-			message: 'Could not fetch ear training scores.',
-		});
-	}
-});
 
-earTrainingAnalyticsController.get('/progress', schemaValidator('query', earTrainingTypeSchema.partial()), async c => {
-	const userId = new ObjectId(c.env.authenticator?.id);
-	const weekBeforeCurrentDate = dayjs().subtract(1, 'week').toDate();
-	const exerciseTypeQuery = c.req.valid('query');
-
-	try {
-		const earTrainingProgress = await EarTrainingAnalyticsService.fetchProgress({
-			userId,
-			weekBeforeCurrentDate,
-			exerciseType: exerciseTypeQuery.type,
-		});
-		return ApiResponse.create(c, earTrainingProgress);
+		return ApiResponse.create(c, earTrainingExerciseStatistics);
 	} catch (error) {
-		console.log(error);
+		console.error(error);
+
 		throw new ApiException(HttpStatus.INTERNAL_ERROR, ApiErrorCode.INTERNAL_ERROR, {
-			isReadableMessage: false,
-			message: 'Could not fetch ear training progress.',
+			message: 'Could not fetch ear training exercise statistics',
 		});
 	}
 });

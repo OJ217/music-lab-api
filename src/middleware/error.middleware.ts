@@ -52,6 +52,7 @@ const resolveError: ResolveError = (err, locale) => {
 };
 
 const errorHandler: ErrorHandler = (err, c) => {
+	console.log(JSON.stringify(err, null, 4), err);
 	const { apiError, httpStatus } = resolveError(err, c.req.header('Accept-Language'));
 	return c.json({ success: false, error: apiError }, httpStatus);
 };

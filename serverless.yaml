@@ -19,8 +19,8 @@ custom:
         prod: true
     apiDomains:
         local: ''
-        dev: 'dev.api.music-lab.app'
-        prod: 'api.music-lab.app'
+        dev: dev.api.music-lab.app
+        prod: api.music-lab.app
     customDomain:
         domainName: ${self:custom.apiDomains.${self:custom.stage}}
         basePath: ''

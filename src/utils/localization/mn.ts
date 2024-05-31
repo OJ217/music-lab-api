@@ -7,6 +7,7 @@ const mnTranslation: TranslationData = {
 	'err.invalid_password': 'Нууц үг буруу байна.',
 	'err.user_not_found': 'Хэрэглэгч олдсонгүй.',
 	'err.not_found': 'Мэдээлэл олдсонгүй.',
+	'err.currently_unauthorized': 'Одоогоор та нэвтрэх боломжгүй байна.',
 };
 
 export default mnTranslation;

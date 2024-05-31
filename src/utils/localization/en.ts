@@ -7,6 +7,7 @@ const enTranslation: TranslationData = {
 	'err.invalid_password': 'Password you entered is incorrect.',
 	'err.user_not_found': 'User not found.',
 	'err.not_found': 'Document not found.',
+	'err.currently_unauthorized': 'We could not sign you in at the moment.',
 };
 
 export default enTranslation;

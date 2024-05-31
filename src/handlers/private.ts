@@ -11,7 +11,6 @@ import errorHandler from '@/middleware/error.middleware';
 import setUpLambda from '@/middleware/lambda.middleware';
 import earTrainingAnalyticsController from '@/modules/ear-training/analytics/ear-training-analytics.controller';
 import earTrainingSessionController from '@/modules/ear-training/session/ear-training-session.controller';
-import earTrainingStreakController from '@/modules/ear-training/streak/ear-training-streak.controller';
 import userController from '@/modules/user/user.controller';
 import { PrivateApiController } from '@/utils/api.util';
 
@@ -22,15 +21,14 @@ app.use('*', logger());
 app.use('*', poweredBy());
 app.use('*', secureHeaders());
 app.use('*', compress({ encoding: 'gzip' }));
-app.use('*', csrf({ origin: ['http://localhost:3000', 'https://music-lab-next.vercel.app', 'https://www.music-lab.app'] }));
-app.use('*', cors({ credentials: true, origin: ['http://localhost:3000', 'https://music-lab-next.vercel.app', 'https://www.music-lab.app'] }));
+app.use('*', csrf({ origin: ['http://localhost:3000', 'https://music-lab-next.vercel.app', 'https://www.music-lab.app', 'https://www.dev.music-lab.app'] }));
+app.use('*', cors({ credentials: true, origin: ['http://localhost:3000', 'https://music-lab-next.vercel.app', 'https://www.music-lab.app', 'https://www.dev.music-lab.app'] }));
 app.use('*', setUpLambda, authenticateUserHeaders);
 
 // **Routes
-app.route('/api/user', userController);
 app.route('/api/ear-training/sessions', earTrainingSessionController);
 app.route('/api/ear-training/analytics', earTrainingAnalyticsController);
-app.route('/api/ear-training/streaks', earTrainingStreakController);
+app.route('/api/user', userController);
 
 // ** Error handler
 app.onError(errorHandler);

@@ -1,9 +1,12 @@
 import bcrypt from 'bcryptjs';
 import dayjs from 'dayjs';
 import fs from 'fs';
+import { Context } from 'hono';
+import { deleteCookie, setCookie } from 'hono/cookie';
 import jwt from 'jsonwebtoken';
 import path from 'path';
 
+import { AUTH_COOKIE_KEYS, AUTH_COOKIE_OPTIONS } from '@/constants/auth.constant';
 import { IAuthenticatorContextPayload } from '@/types/api.type';
 
 type JwtType = 'common' | 'access_token' | 'refresh_token';
@@ -11,7 +14,7 @@ const TOKEN_ISSUER = 'music-lab-api';
 const TOKEN_AUDIENCE = ['music-lab-web', 'music-lab-pwa'];
 
 const tokenExpiries: Record<JwtType, number> = {
-	access_token: dayjs().add(1, 'day').unix(),
+	access_token: dayjs().add(30, 'days').unix(),
 	refresh_token: dayjs().add(30, 'days').unix(),
 	common: dayjs().add(15, 'minutes').unix(),
 };
@@ -87,6 +90,20 @@ export class AuthService {
 				decoded: null,
 			};
 		}
+	}
+}
+
+export class AuthCredentialsService {
+	private constructor() {}
+
+	public static setCredentials(c: Context, accessToken: string, refreshToken: string) {
+		setCookie(c, AUTH_COOKIE_KEYS.ACCESS_TOKEN, accessToken, AUTH_COOKIE_OPTIONS.ACCESS_TOKEN);
+		setCookie(c, AUTH_COOKIE_KEYS.REFRESH_TOKEN, refreshToken, AUTH_COOKIE_OPTIONS.REFRESH_TOKEN);
+	}
+
+	public static deleteCredentials(c: Context) {
+		deleteCookie(c, AUTH_COOKIE_KEYS.ACCESS_TOKEN);
+		deleteCookie(c, AUTH_COOKIE_KEYS.REFRESH_TOKEN);
 	}
 }
 

@@ -1,12 +1,17 @@
+import dayjs from 'dayjs';
 import { ObjectId } from 'mongodb';
 import { z } from 'zod';
 
 import schemaValidator from '@/middleware/validation.middleware';
 import { EarTrainingSessionService } from '@/modules/ear-training/ear-training.service';
+import { UserEarTrainingProfileService, UserService } from '@/modules/user/user.service';
 import { EarTrainingType } from '@/types';
 import { ApiResponse, HttpStatus, PrivateApiController } from '@/utils/api.util';
+import { calculateXP } from '@/utils/calculation.util';
+import { isSameDay } from '@/utils/date.util';
+import { mongoInstance } from '@/utils/db.util';
 import { ApiErrorCode, ApiException } from '@/utils/error.util';
-import { earTrainingTypeSchema, objectIdParamSchema, paginationSchema } from '@/utils/validation.util';
+import { earTrainingTypeSchema, paginationSchema } from '@/utils/validation.util';
 
 const earTrainingSessionController = new PrivateApiController();
 
@@ -40,19 +45,88 @@ earTrainingSessionController.post(
 			.refine(({ statistics }) => statistics.map(s => s.correct + s.incorrect === s.questionCount).every(s => s), { message: 'Invalid practice session statistics', path: ['statistics'] })
 	),
 	async c => {
+		const currentDate = dayjs();
 		const userId = new ObjectId(c.env.authenticator?.id);
 		const earTrainingSessionData = c.req.valid('json');
 
-		try {
-			const { _id } = await EarTrainingSessionService.create({ ...earTrainingSessionData, userId });
-			return ApiResponse.create(c, { _id: _id.toString() }, HttpStatus.CREATED);
-		} catch (error) {
-			console.log(error);
-			throw new ApiException(HttpStatus.INTERNAL_ERROR, ApiErrorCode.INTERNAL_ERROR, {
-				isReadableMessage: false,
-				message: 'Could not add ear training session.',
+		// ** Initialize db transaction
+		const session = mongoInstance.startSession();
+		session.startTransaction();
+
+		// ** User fetch
+		const user = await UserService.fetchById(userId);
+
+		if (!user) {
+			await session.abortTransaction();
+
+			throw new ApiException(HttpStatus.UNAUTHORIZED, ApiErrorCode.UNAUTHORIZED, {
+				isReadableMessage: true,
+				message: 'err.user_not_found',
 			});
 		}
+
+		// ** Daily streak logging
+		const earTrainingProfile = user.earTrainingProfile;
+		let streakUpdated = false;
+
+		if (!(isSameDay(currentDate, earTrainingProfile.currentStreak.lastLogDate) && earTrainingProfile.currentStreak.count !== 0)) {
+			const updatedStreak = await UserEarTrainingProfileService.logStreak({
+				userId,
+				currentDate,
+				currentStreak: earTrainingProfile.currentStreak,
+				bestStreak: earTrainingProfile?.bestStreak,
+				session,
+			});
+
+			if (updatedStreak?.currentStreak === undefined || updatedStreak?.currentStreak === null) {
+				await session.abortTransaction();
+
+				throw new ApiException(HttpStatus.INTERNAL_ERROR, ApiErrorCode.INTERNAL_ERROR, {
+					message: 'Could not log streak.',
+				});
+			}
+
+			streakUpdated = true;
+		}
+
+		// ** XP calculation
+		const xp = calculateXP(earTrainingSessionData.result.correct, earTrainingSessionData.result.score, earTrainingSessionData.type);
+		const updatedXP = await UserEarTrainingProfileService.addStatsAndXP({
+			userId,
+			xp,
+			duration: earTrainingSessionData.duration,
+			session,
+		});
+
+		if (updatedXP === undefined || updatedXP === null) {
+			await session.abortTransaction();
+
+			throw new ApiException(HttpStatus.INTERNAL_ERROR, ApiErrorCode.INTERNAL_ERROR, {
+				message: 'Could not log XP.',
+			});
+		}
+
+		// ** Session creation
+		const { _id } = await EarTrainingSessionService.create(
+			{
+				...earTrainingSessionData,
+				userId,
+			},
+			session
+		);
+
+		await session.commitTransaction();
+		await session.endSession();
+
+		return ApiResponse.create(
+			c,
+			{
+				_id: _id.toString(),
+				xp,
+				streakUpdated,
+			},
+			HttpStatus.CREATED
+		);
 	}
 );
 
@@ -72,25 +146,6 @@ earTrainingSessionController.get('/', schemaValidator('query', paginationSchema.
 			}
 		);
 		return ApiResponse.create(c, practiceSessions);
-	} catch (error) {
-		console.log(error);
-		throw new ApiException(HttpStatus.INTERNAL_ERROR, ApiErrorCode.INTERNAL_ERROR, {
-			isReadableMessage: false,
-			message: 'Could not fetch user ear training sessions.',
-		});
-	}
-});
-
-earTrainingSessionController.get('/:id', schemaValidator('param', objectIdParamSchema), async c => {
-	const userId = new ObjectId(c.env.authenticator?.id);
-	const { id } = c.req.valid('param');
-
-	try {
-		const practiceSession = await EarTrainingSessionService.fetchById({
-			userId,
-			sessionId: id,
-		});
-		return ApiResponse.create(c, practiceSession);
 	} catch (error) {
 		console.log(error);
 		throw new ApiException(HttpStatus.INTERNAL_ERROR, ApiErrorCode.INTERNAL_ERROR, {

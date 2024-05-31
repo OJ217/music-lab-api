@@ -1,11 +1,10 @@
 import { MiddlewareHandler } from 'hono';
-import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
-import { HTTPException } from 'hono/http-exception';
+import { getCookie, setCookie } from 'hono/cookie';
 import { ObjectId } from 'mongodb';
 
-import { AUTH_COOKIE_KEYS, AUTH_COOKIE_OPTIONS } from '@/constants/auth.constant';
+import { AUTH_COOKIE_KEYS, AUTH_COOKIE_OPTIONS, AUTH_HEADER_KEYS } from '@/constants/auth.constant';
 import { UserService } from '@/modules/user/user.service';
-import { AuthService } from '@/services/auth.service';
+import { AuthCredentialsService, AuthService } from '@/services/auth.service';
 import { IAuthenticatorContextPayload, IPrivateEndpointBindings } from '@/types/api.type';
 import { HttpStatus } from '@/utils/api.util';
 import { ApiErrorCode, ApiException } from '@/utils/error.util';
@@ -14,13 +13,8 @@ import { ApiErrorCode, ApiException } from '@/utils/error.util';
 
 // ** For authentication using cookies
 export const authenticateUserCookies: MiddlewareHandler<{ Bindings: IPrivateEndpointBindings }> = async (c, next) => {
-	const accessTokenRaw = getCookie(c, AUTH_COOKIE_KEYS.ACCESS_TOKEN) as string;
-	const refreshTokenRaw = getCookie(c, AUTH_COOKIE_KEYS.REFRESH_TOKEN) as string;
-
-	if (!accessTokenRaw && !refreshTokenRaw)
-		throw new ApiException(HttpStatus.UNAUTHORIZED, ApiErrorCode.UNAUTHORIZED, {
-			message: 'Unauthenticated: Invalid access_token',
-		});
+	const accessTokenRaw = getCookie(c, AUTH_COOKIE_KEYS.ACCESS_TOKEN) ?? '';
+	const refreshTokenRaw = getCookie(c, AUTH_COOKIE_KEYS.REFRESH_TOKEN) ?? '';
 
 	const accessToken = AuthService.extractToken(accessTokenRaw);
 
@@ -30,16 +24,20 @@ export const authenticateUserCookies: MiddlewareHandler<{ Bindings: IPrivateEndp
 		return await next();
 	}
 
-	if ((accessToken.expired || !accessToken) && refreshTokenRaw) {
+	if ((accessToken.expired || !accessTokenRaw) && refreshTokenRaw) {
 		const refreshToken = AuthService.extractToken(refreshTokenRaw);
 
-		if (!refreshToken.valid) throw new HTTPException(401, { message: 'Unauthenticated: Invalid refresh_token' });
+		if (!refreshToken.valid) {
+			AuthCredentialsService.deleteCredentials(c);
+			throw new ApiException(HttpStatus.UNAUTHORIZED, ApiErrorCode.UNAUTHORIZED, {
+				message: 'Unauthenticated: Invalid refresh_token',
+			});
+		}
 
 		const user = await UserService.fetchById(new ObjectId(refreshToken.decoded.payload.id));
 
 		if (!user) {
-			deleteCookie(c, AUTH_COOKIE_KEYS.ACCESS_TOKEN);
-			deleteCookie(c, AUTH_COOKIE_KEYS.REFRESH_TOKEN);
+			AuthCredentialsService.deleteCredentials(c);
 			throw new ApiException(HttpStatus.UNAUTHORIZED, ApiErrorCode.NOT_FOUND, {
 				isReadableMessage: true,
 				message: 'err.user_not_found',
@@ -62,6 +60,7 @@ export const authenticateUserCookies: MiddlewareHandler<{ Bindings: IPrivateEndp
 		return await next();
 	}
 
+	AuthCredentialsService.deleteCredentials(c);
 	throw new ApiException(HttpStatus.UNAUTHORIZED, ApiErrorCode.UNAUTHORIZED, {
 		isReadableMessage: false,
 		message: 'Unauthenticated: Invalid request',
@@ -70,8 +69,8 @@ export const authenticateUserCookies: MiddlewareHandler<{ Bindings: IPrivateEndp
 
 // ** For authentication using headers
 const authenticateUserHeaders: MiddlewareHandler<{ Bindings: IPrivateEndpointBindings }> = async (c, next) => {
-	const accessTokenRaw = c.req.header('Music-Lab-X-Access-Token') as string;
-	const refreshTokenRaw = c.req.header('Music-Lab-X-Refresh-Token') as string;
+	const accessTokenRaw = c.req.header(AUTH_HEADER_KEYS.ACCESS_TOKEN) as string;
+	const refreshTokenRaw = c.req.header(AUTH_HEADER_KEYS.REFRESH_TOKEN) as string;
 
 	if (!accessTokenRaw)
 		throw new ApiException(HttpStatus.UNAUTHORIZED, ApiErrorCode.UNAUTHORIZED, {
@@ -81,8 +80,8 @@ const authenticateUserHeaders: MiddlewareHandler<{ Bindings: IPrivateEndpointBin
 	const accessToken = AuthService.extractToken(accessTokenRaw);
 
 	if (accessToken.valid) {
-		console.info('Authenticating using access token 🔑✅');
 		c.env.authenticator = accessToken.decoded.payload;
+		console.info('Authenticating using access token 🔑✅');
 		return await next();
 	}
 
@@ -111,7 +110,7 @@ const authenticateUserHeaders: MiddlewareHandler<{ Bindings: IPrivateEndpointBin
 		};
 
 		const reIssuedAccessToken = AuthService.generateToken(userId, authTokenPayload, { jwtType: 'access_token' });
-		c.header('Music-Lab-X-Access-Token', reIssuedAccessToken);
+		c.header(AUTH_HEADER_KEYS.ACCESS_TOKEN, reIssuedAccessToken);
 
 		console.log('Reissuing access token 🛠️✅');
 		c.env.authenticator = authTokenPayload;
