@@ -1,7 +1,6 @@
 import { OAuth2Client } from 'google-auth-library';
 import { z } from 'zod';
 
-import { AUTHORIZED_EMAILS } from '@/constants/auth.constant';
 import schemaValidator from '@/middleware/validation.middleware';
 import { InstitutionType, UserService } from '@/modules/user/user.service';
 import { AuthCredentialsService, AuthService, HashService } from '@/services/auth.service';
@@ -180,13 +179,6 @@ authPublicController.post(
 			throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.BAD_REQUEST, {
 				message: 'Invalid payload.',
 			});
-
-		if (!AUTHORIZED_EMAILS.includes(email)) {
-			throw new ApiException(HttpStatus.BAD_REQUEST, ApiErrorCode.BAD_REQUEST, {
-				isReadableMessage: true,
-				message: 'err.currently_unauthorized',
-			});
-		}
 
 		let user = await UserService.fetchByEmail(email);
 

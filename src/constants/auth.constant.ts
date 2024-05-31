@@ -44,6 +44,7 @@ export const AUTH_COOKIE_OPTIONS: Record<keyof typeof AUTH_COOKIE_KEYS, CookieOp
 	},
 };
 
+// ** For testing purposes
 export const ADMIN_EMAILS = ['dev-admin@music-lab.io', 'tsenguunnyz@gmail.com', 'ochiroo032373@gmail.com'];
 export const USER_EMAILS = [
 	'erikamargad0429@gmail.com',
@@ -83,5 +84,20 @@ export const USER_EMAILS = [
 	'tserenbattengis4@gmail.com',
 	'agvaandorj1234@gmail.com',
 	'amartuvshin343@gmail.com',
+	'maraljingua07@gmail.com',
+	'Gereleegereltsetseg31@gmail.com',
+	'gereleegereltsetseg31@gmail.com',
+	'bayaraabayaraa402@gmail.com',
+	'batuilst622@gmail.com',
+	'munhnyam5366@gmail.com',
+	'solon90906@gmail.com',
+	'munhnyam0569@gmail.com',
+	'enguunenguun730@gmail.com',
+	'kenryugiji0812@gmail.com',
+	'tbodijargal9@gmail.com',
+	'amjilt2772@gmail.com',
+	'nndiaaan@gmail.com',
+	'hikihishigee@gmail.com',
+	'namuunnamuun0309@gmail.com',
 ];
-export const AUTHORIZED_EMAILS = [...ADMIN_EMAILS, ...USER_EMAILS];
+export const TEST_USER_EMAILS = [...ADMIN_EMAILS, ...USER_EMAILS];
